@@ -1,15 +1,16 @@
-% analysis estimated historic Svensson parameters, 1961 to present
+% analyse estimated historic Svensson parameters, 1961 to present
 
-addpath(genpath('../../commonUtilities'))
-dataDir = '../../finDataMatlab';
+% set data directory
+dataDir = '../priv_bondPriceData';
 
 %% load historic estimated parameters
 
-fname = fullfile(dataDir, 'private_data/rawData/feds200628/paramsData_FED.csv');
+fname = fullfile(dataDir, 'paramsData_FED.csv');
 paramsTable = readtable(fname);
 
 %% define maturities of interest
 
+% maturities are given in years
 maturs = [0.1 1:30];
 
 %% evaluate model for given maturities and given day
@@ -48,8 +49,14 @@ timeGrid = repmat(paramsTable.Date, 1, length(maturs));
 
 mesh(timeGrid(1:freq:end,:), maturGrid(1:freq:end,:), yields(1:freq:end,:))
 datetick 'x'
+xlabel('Maturity')
+ylabel('Year')
+title('Continuously compounded annualized treasury yields')
 
 %% plot forward rates over time
 
 mesh(timeGrid(1:freq:end, :), maturGrid(1:freq:end,:), fowRates(1:freq:end,:))
 datetick 'x'
+xlabel('Maturity')
+ylabel('Year')
+title('Continuously compounded forward rates')
