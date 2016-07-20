@@ -58,39 +58,33 @@ dat = nweekdate(2, 3, 2016, 6, [4; 5]);
 datestr(dat)
 datestr(dat, 'ddd')
 
-%% test block in period
-
-xx = blockInPeriodOfMonth(allDates, {'Tue', 'Wed', 'Thu'}, 3, holidayDates);
-
 %% get monthly auction dates
 
 % 2, 5, 7: Tue, Wed, Thu, 4th week
+xx = blockInPeriodOfMonth(allDates, {'Tue', 'Wed', 'Thu'}, 4, holidayDates);
 
 % 2 years
-TN02Y_dates = periodOfMonth(allDates, 'Tue', 4, holidayDates);
+TN02Y_dates = xx(:, 1);
 
 % 5 years
-notAllowedDays = sort([holidayDates(:); TN02Y_dates]);
-TN05Y_dates = periodOfMonth(allDates, 'Wed', 4, notAllowedDays);
+TN05Y_dates = xx(:, 2);
 
 % 7 years
-notAllowedDays = sort([holidayDates(:); TN02Y_dates; TN05Y_dates]);
-TN07Y_dates = periodOfMonth(allDates, 'Thu', 4, notAllowedDays);
+TN07Y_dates = xx(:, 3);
 
 %% get monthly auction dates
 
 % 3, 10, 30: Tue, Wed, Thu, 2th week
+xx = blockInPeriodOfMonth(allDates, {'Tue', 'Wed', 'Thu'}, 2, holidayDates);
 
 % 3 years
-TN03Y_dates = periodOfMonth(allDates, 'Tue', 2, holidayDates);
+TN03Y_dates = xx(:, 1);
 
 % 10 years
-notAllowedDays = sort([holidayDates(:); TN03Y_dates]);
-TN10Y_dates = periodOfMonth(allDates, 'Wed', 2, notAllowedDays);
+TN10Y_dates = xx(:, 2);
 
 % 30 years
-notAllowedDays = sort([holidayDates(:); TN03Y_dates; TN10Y_dates]);
-TB30Y_dates = periodOfMonth(allDates, 'Thu', 2, notAllowedDays);
+TB30Y_dates = xx(:, 3);
 
 %% create overview table
 
@@ -122,6 +116,10 @@ auctions.Name = replaceVals(allLabels, treasuries, 'Label', 'Name');
 auctions.Weekday = datestr(auctions.AuctionDate, 'ddd');
 auctions.Date = datestr(auctions.AuctionDate, 'mmm-dd-yyyy');
 auctions = sortrows(auctions, 'AuctionDate');
+
+%% write to disk
+
+writetable(auctions, 'notes/artificialAuctions.csv')
 
 
 

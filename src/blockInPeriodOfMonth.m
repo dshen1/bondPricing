@@ -1,4 +1,4 @@
-function validDates = blockInPeriodOfMonth(allDates, blockOfDays, periodId, notAllowedDates)
+function allBusinessDates = blockInPeriodOfMonth(allDates, blockOfDays, periodId, notAllowedDates)
 % get given weekday in a given period of the month, such that full block of
 % days is in period
 %
@@ -43,42 +43,40 @@ allYearMonths = unique(xx(:, 1:2), 'rows');
 
 %%
 
+allWeekdayDates = [];
 for ii=1:size(allYearMonths, 1)
     % get current year-month
     thisYearMonth = allYearMonths(ii, :);
-end
-%% 
-
-thisYear = allYearMonths(1, 1);
-thisMonth = allYearMonths(1, 2);
     
-% get different date proposals
-nProposals = length(blockDayCodes)-1;
-dateProposals = zeros(nProposals, 1);
-for jj=1:nProposals
-    dateProposals(jj) = nweekdate(periodId, blockDayCodes(1), ...
-        thisYear, thisMonth, blockDayCodes(jj+1));
+    % get block dates in given month
+    validDates = getBlockInMonth(blockDayCodes, periodId, ...
+        thisYearMonth(1), thisYearMonth(2));
+    
+    % attach
+    allWeekdayDates = [allWeekdayDates; validDates'];
 end
 
-% take lastest proposal for anchor date
-requestedDate = max(dateProposals);
+%% make non-overlapping business days
 
-%% get other dates from block
-
-% get lags to other dates
-if length(blockDayCodes) > 1
-    lags = blockDayCodes(2:end)- blockDayCodes(1);
+allBusinessDates = zeros(size(allWeekdayDates));
+for ii=1:size(allWeekdayDates, 2)
+    % get original dates
+    origDates = allWeekdayDates(:, ii);
+    
+    % get indices for dates that are on not allowed dates
+    xxHolidayInd = ismember(origDates, notAllowedDates);
+    
+    % move to next trading day
+    xxToMove = origDates(xxHolidayInd);
+    newDates = origDates;
+    newDates(xxHolidayInd) = busdate(xxToMove, 1, notAllowedDates, [1 0 0 0 0 0 1]);
+   
+    % increase set of not allowed days
+    notAllowedDates = [notAllowedDates; newDates];
+    
+    % add to business dates
+    allBusinessDates(:, ii) = newDates;
 end
-
-validDates = [requestedDate; requestedDate + lags];
-
-%% conduct sanity checks
-
-% check that block is in same week
-assert(length(unique(week(datetime(datevec(validDates))))) == 1)
-
-% check that block is within valid date range
-
 
 end
 
