@@ -82,3 +82,10 @@
 
 - The Treasury and Securities Market: Overview and Recent Developments
 - https://www.newyorkfed.org/aboutthefed/fedpoint/fed41.html
+
+# Holidays in tentative auction schedule
+
+Holiday - Monday, May 30, 2016 - Memorial Day
+Holiday - Monday, July 04, 2016 - Independence Day
+Holiday - Monday, September 05, 2016 - Labor Day
+Holiday - Monday, October 10, 2016 - Columbus Day
