@@ -39,7 +39,7 @@ weekdayDates = extendedAllDates(weekday(extendedAllDates) == weekDayCode);
 associatedMonths = month(weekdayDates);
 
 % preallocation
-nWeekDayDates = length(thursdayDates);
+nWeekDayDates = length(weekdayDates);
 weekDayInMonth = false(nWeekDayDates, 1);
 
 weekDayInMonthCounter = 1;
