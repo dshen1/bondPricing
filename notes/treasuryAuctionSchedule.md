@@ -89,3 +89,20 @@ Holiday - Monday, May 30, 2016 - Memorial Day
 Holiday - Monday, July 04, 2016 - Independence Day
 Holiday - Monday, September 05, 2016 - Labor Day
 Holiday - Monday, October 10, 2016 - Columbus Day
+
+# Conventions
+
+From MATLAB Financial Toolbox documentation:
+
+- The basis for Treasury bill interest calculation is actual/360
+
+From https://www.newyorkfed.org/aboutthefed/fedpoint/fed07.html:
+
+- bills are quoted at a discount from face value, with the discount
+  expressed as an annual rate based on a 360-day year. 
+
+From https://en.wikipedia.org/wiki/Talk:United_States_Treasury_security#Dubious:
+- Actual/Actual, which is what you were expecting to see, is used by
+  U.S. Treasury notes and bonds, but not bills. See the day count
+  article for more details.
+
