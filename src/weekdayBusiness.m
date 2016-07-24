@@ -13,21 +13,19 @@ function weekdayDates = weekdayBusiness(dateRange, dayName, notAllowedDates)
 allDates = dateRange(:);
 
 % get weekday numeric code
-switch dayName
-    case 'Mon'
-        weekDayCode = 2;
-    case 'Tue'
-        weekDayCode = 3;
-    otherwise
-        error('bondPricing:weekdayBusiness', 'Given weekday name is not implemented.')
-end
+GS = GlobalSettings;
+weekDayCode = replaceVals({dayName}, GS.WeekdayConventions, 'weekdayShort', 'MatlabNum');
             
 % get all weekdays
 xx = weekday(allDates);
 weekdayDates = allDates(xx == weekDayCode);
 
 % possibly move to next allowed business day
-weekdayDates = moveToAllowedBusinessDay(weekdayDates, allDates(:), notAllowedDates);
+weekdayDates = makeBusDate(weekdayDates, 'follow', notAllowedDates);
+
+% only pick dates within original range
+xxInd = weekdayDates <= dateRange(end) & weekdayDates >= dateRange(1);
+weekdayDates = weekdayDates(xxInd);
 
 % create table for debuggin
 % weekdayDatesTab = table(weekdayDates, datestr(weekdayDates), datestr(weekdayDates, 'ddd'));

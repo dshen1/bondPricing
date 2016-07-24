@@ -32,6 +32,10 @@ allInds = [priorInds, afterInds(2:end)];
 fourthWeekDates = weekdayDates(allInds(:));
 
 % move selected days to allowed business days
-fourthWeekDates = moveToAllowedBusinessDay(fourthWeekDates, allDates(:), notAllowedDates);
+fourthWeekDates = makeBusDate(fourthWeekDates, 'follow', notAllowedDates);
+
+% only pick dates within original range
+xxInd = fourthWeekDates <= allDates(end) & fourthWeekDates >= allDates(1);
+fourthWeekDates = fourthWeekDates(xxInd);
 
 end
