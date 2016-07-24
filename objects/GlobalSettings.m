@@ -5,6 +5,7 @@ classdef GlobalSettings < handle
        	DateFormat = 'yyyy-mm-dd';      % standard date format
         Holidays = holidays;            % defined holidays
         WeekdayConventions
+        WeekendInd
     end
     
 %    properties (Dependent)
@@ -13,6 +14,9 @@ classdef GlobalSettings < handle
      methods % Constructor
         function obj = GlobalSettings()
             obj.WeekdayConventions = GlobalSettings.getWeekdayConventions();
+            % get weekend indicators in MATLAB sorting
+            obj.WeekendInd = replaceVals(1:7, obj.WeekdayConventions, ...
+                'MatlabNum', 'weekendInd');
         end
      end
 
@@ -24,6 +28,7 @@ classdef GlobalSettings < handle
              disp(['DateFormat:               ''', obj.DateFormat,'''']);
              disp(['Holidays:                 call to ''holidays()''']);
              disp(['WeekdayConventions:       look-up table']);
+             disp(['WeekdayInd                ']);
              disp('***********************************************');
          end
          

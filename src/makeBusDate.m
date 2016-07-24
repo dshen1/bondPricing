@@ -1,4 +1,4 @@
-function dates = makeBusDate(dates, movingDirection, notAllowedDates)
+function dates = makeBusDate(dates, movingDirection, notAllowedDates, weekendInd)
 % move non-business days to business days
 %
 % Inputs:
@@ -10,18 +10,19 @@ function dates = makeBusDate(dates, movingDirection, notAllowedDates)
 %   dates               nx1 vector of business dates
 
 % get weekday and calendar definitions
-GS = GlobalSettings();
-if nargin == 2
-    notAllowedDates = GS.Holidays;
-    %notAllowedDates = holidays();
+if nargin == 2 | nargin == 3
+    GS = GlobalSettings();
+    if ~exist('notAllowedDates', 'var')
+        notAllowedDates = GS.Holidays;
+    end
+    if ~exist('weekendInd', 'var')
+        % get weekend indicator in MATLAB order
+        weekendInd = GS.WeekendInd;
+    end
 end
 
 % make column vector
 dates = dates(:);
-
-% get weekend indicator in MATLAB order
-weekendInd = replaceVals(1:7, GS.WeekdayConventions, 'MatlabNum', 'weekendInd');
-% weekendInd = [1 0 0 0 0 0 1];
 
 % find not-business days
 xxInd = ~isbusday(dates, notAllowedDates, weekendInd);

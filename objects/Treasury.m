@@ -16,7 +16,11 @@ classdef Treasury
     
     methods
         %% constructor
-        function obj = Treasury(treasuryType, nTerm, auctionDate)
+        function obj = Treasury(treasuryType, nTerm, auctionDate, GS)
+            if ~exist('GS', 'var')
+                GS = GlobalSettings();
+            end
+            
            % initialize treasury security
            obj.Type = treasuryType;
            obj.AuctionDate = datenum(auctionDate);
@@ -30,7 +34,7 @@ classdef Treasury
            obj.FullName = [num2str(obj.NTerm) res.fullName];
            obj.Period = res.period;
            obj.Basis = res.basis;
-           obj.Maturity = ll_getMaturity(obj);
+           obj.Maturity = ll_getMaturity(obj, GS);
            
            % not yet finished
            obj.CouponRate = 0.02;
@@ -83,7 +87,8 @@ classdef Treasury
             end
         end
         
-        function endDate = ll_getMaturity(obj)
+        function endDate = ll_getMaturity(obj, GS)
+                
             % get maturity of bond
             switch obj.Type
                 case 'TBill'
@@ -92,7 +97,7 @@ classdef Treasury
                     endDate = obj.AuctionDate + obj.NTerm * 365;
             end
             % make business day
-            endDate = makeBusDate(endDate, 'previous');
+            endDate = makeBusDate(endDate, 'previous', GS.Holidays, GS.WeekendInd);
         end
         
         %% display method

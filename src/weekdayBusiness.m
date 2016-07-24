@@ -15,13 +15,13 @@ allDates = dateRange(:);
 % get weekday numeric code
 GS = GlobalSettings;
 weekDayCode = replaceVals({dayName}, GS.WeekdayConventions, 'weekdayShort', 'MatlabNum');
-            
+
 % get all weekdays
 xx = weekday(allDates);
 weekdayDates = allDates(xx == weekDayCode);
 
 % possibly move to next allowed business day
-weekdayDates = makeBusDate(weekdayDates, 'follow', notAllowedDates);
+weekdayDates = makeBusDate(weekdayDates, 'follow', notAllowedDates, GS.WeekendInd);
 
 % only pick dates within original range
 xxInd = weekdayDates <= dateRange(end) & weekdayDates >= dateRange(1);

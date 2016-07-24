@@ -28,7 +28,7 @@ end
 nBills = length(TBdates);
 allTBills = [];
 for ii=1:nBills
-    obj = Treasury('TBill', nTerm, TBdates(ii));
+    obj = Treasury('TBill', nTerm, TBdates(ii), GS);
     allTBills = [allTBills; obj];
 end
 
