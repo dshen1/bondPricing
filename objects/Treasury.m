@@ -17,27 +17,34 @@ classdef Treasury
     methods
         %% constructor
         function obj = Treasury(treasuryType, nTerm, auctionDate, GS)
-            if ~exist('GS', 'var')
-                GS = GlobalSettings();
+            % preallocation without input
+            if nargin == 0
+                
+            else
+                
+                if ~exist('GS', 'var')
+                    GS = GlobalSettings();
+                end
+                
+                % initialize treasury security
+                obj.Type = treasuryType;
+                obj.AuctionDate = datenum(auctionDate);
+                obj.NTerm = nTerm;
+                
+                % get type specific conventions
+                res = ll_getTypeConventions(obj);
+                
+                % set other properties
+                obj.Name = [obj.Type '_' num2str(obj.NTerm) '_' res.timeExt];
+                obj.FullName = [num2str(obj.NTerm) res.fullName];
+                obj.Period = res.period;
+                obj.Basis = res.basis;
+                obj.Maturity = ll_getMaturity(obj, GS);
+                
+                % not yet finished
+                obj.CouponRate = 0.02;
+                
             end
-            
-           % initialize treasury security
-           obj.Type = treasuryType;
-           obj.AuctionDate = datenum(auctionDate);
-           obj.NTerm = nTerm;
-           
-           % get type specific conventions
-           res = ll_getTypeConventions(obj);
-           
-           % set other properties
-           obj.Name = [obj.Type '_' num2str(obj.NTerm) '_' res.timeExt];
-           obj.FullName = [num2str(obj.NTerm) res.fullName];
-           obj.Period = res.period;
-           obj.Basis = res.basis;
-           obj.Maturity = ll_getMaturity(obj, GS);
-           
-           % not yet finished
-           obj.CouponRate = 0.02;
         end
         
         %% high-level user interface methods

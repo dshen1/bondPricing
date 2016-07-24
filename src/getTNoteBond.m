@@ -36,14 +36,18 @@ end
 
 % create T-Note or T-Bond for each auction day
 nNotes = length(TNBdates);
-allTNB = [];
-for ii=1:nNotes
+if nTerm == 30
+    allTNB(nNotes, 1) = Treasury('TBond', nTerm, TNBdates(end), GS);
+else
+    allTNB(nNotes, 1) = Treasury('TNote', nTerm, TNBdates(end), GS);
+end
+for ii=1:(nNotes-1)
     if nTerm == 30
-        obj = Treasury('TBond', nTerm, TNBdates(ii));
+        obj = Treasury('TBond', nTerm, TNBdates(ii), GS);
     else
-        obj = Treasury('TNote', nTerm, TNBdates(ii));
+        obj = Treasury('TNote', nTerm, TNBdates(ii), GS);
     end
-    allTNB = [allTNB; obj];
+    allTNB(ii, 1) = obj;
 end
 
 end

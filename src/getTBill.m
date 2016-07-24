@@ -26,10 +26,9 @@ end
 
 % create T-Bill for each auction day
 nBills = length(TBdates);
-allTBills = [];
-for ii=1:nBills
-    obj = Treasury('TBill', nTerm, TBdates(ii), GS);
-    allTBills = [allTBills; obj];
+allTBills(nBills, 1) = Treasury('TBill', nTerm, TBdates(end), GS);
+for ii=1:(nBills-1)
+    allTBills(ii) = Treasury('TBill', nTerm, TBdates(ii), GS);
 end
 
 end
