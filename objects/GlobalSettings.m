@@ -34,7 +34,7 @@ classdef GlobalSettings < handle
          function lookUp = getWeekdayConventions()
              % weekday names
              xxMonToSun = datenum('2016-07-18'):datenum('2016-07-24');
-             shortNames = datestr(xxMonToSun, 'ddd');
+             shortNames = cellstr(datestr(xxMonToSun, 'ddd'));
              [~, longNames] = weekday(xxMonToSun, 'long');
              
              % weekday numeric code
@@ -44,9 +44,9 @@ classdef GlobalSettings < handle
              weekend = [0 0 0 0 0 1 1]';
              
              % generate lookup table
-             lookUp = table(longNames, shortNames, weekdayCode, weekend);
+             lookUp = table(cellstr(longNames), shortNames, weekdayCode, weekend);
              lookUp.Properties.VariableNames = ...
-                 {'weekday', 'weekdayShort', 'weekdayNum', 'weekendInd'};
+                 {'weekday', 'weekdayShort', 'MatlabNum', 'weekendInd'};
              
          end
      end

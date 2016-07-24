@@ -7,6 +7,7 @@ classdef Treasury
         AuctionDate
         NTerm
         Name
+        FullName
         Maturity
         Period
         Basis
@@ -26,6 +27,7 @@ classdef Treasury
            
            % set other properties
            obj.Name = [obj.Type '_' num2str(obj.NTerm) '_' res.timeExt];
+           obj.FullName = [num2str(obj.NTerm) res.fullName];
            obj.Period = res.period;
            obj.Basis = res.basis;
            obj.Maturity = ll_getMaturity(obj);
@@ -48,7 +50,11 @@ classdef Treasury
         
         % check whether treasury security is traded at given date
         function inRange = isTraded(obj, thisDate)
-            inRange = obj.AuctionDate <= thisDate && thisDate <= obj.Maturity;
+            if isscalar(obj)
+                inRange = obj.AuctionDate <= thisDate && thisDate <= obj.Maturity;
+            else % array of treasuries
+                inRange = [obj.AuctionDate]' <= thisDate & thisDate <= [obj.Maturity]';
+            end
         end
 
 
@@ -63,11 +69,17 @@ classdef Treasury
                     res.timeExt = 'W';
                     res.period = 0; % no coupons
                     res.basis = 2; % actual/360
+                    res.fullName = '-Week BILL';
                 case {'TNote', 'TBond'}
                     % get unit of time
                     res.timeExt = 'Y';
                     res.period = 2; % biannually
                     res.basis = 0; % actual/actual; not verified yet!!
+                    if strcmp(obj.Type, 'TNote')
+                        res.fullName = '-Year NOTE';
+                    else
+                        res.fullName = '-Year BOND';
+                    end
             end
         end
         
@@ -85,39 +97,57 @@ classdef Treasury
         
         %% display method
         function disp(obj)
-            % determine frequency
-            switch obj.Period
-                case 0 
-                    couponFreq = 'Zero coupon';
-                case 1
-                    couponFreq = 'Annual';
-                case 2
-                    couponFreq = 'Biannual';
+            if length(obj) == 1 % single object
+                % determine frequency
+                switch obj.Period
+                    case 0
+                        couponFreq = 'Zero coupon';
+                    case 1
+                        couponFreq = 'Annual';
+                    case 2
+                        couponFreq = 'Biannual';
+                end
+                
+                % determine day count convention
+                switch obj.Basis
+                    case 0
+                        dConvention = 'actual/actual';
+                    case 1
+                        dConvention = '30/360';
+                    case 2
+                        dConvention = 'actual/360';
+                    case 3
+                        dConvention = 'actual/365';
+                    case 4
+                        dConvention = '30/360';
+                end
+                
+                disp(['********* Treasury: ' obj.FullName ' ***********'])
+                disp(['Type:                 ', obj.Type])
+                disp(['Auction date:         ', datestr(obj.AuctionDate)])
+                disp(['Maturity date:        ', datestr(obj.Maturity)])
+                disp(['Maturity in days:     ', num2str(obj.Maturity - obj.AuctionDate) ' days'])
+                disp(['Coupon rate:          ', num2str(obj.CouponRate*100) ' %'])
+                disp('  ************* Conventions ***************')
+                disp(['Coupon frequency:     ', couponFreq])
+                disp(['Day count convention: ', dConvention])
+            else
+                %%
+                % create table with most important information
+                nObjs = length(obj);
+                allTypes = {obj.FullName}';
+                allMaturs = [obj.Maturity]';
+                allMatursString = cellstr(datestr(allMaturs));
+                allCoupons = num2str([obj.CouponRate]'*100);
+                allCoupons = [allCoupons repmat(' %', nObjs, 1)];
+                allMatursInDays = [obj.Maturity]' - [obj.AuctionDate]';
+                infoTable = table(allTypes, allCoupons, ...
+                    allMatursString, allMatursInDays,...
+                    'VariableNames', {'TreasuryType', 'CouponRate', ...
+                    'Maturity', 'MaturityInDays'});
+                disp(infoTable)
+                %%
             end
-            
-            % determine day count convention
-            switch obj.Basis
-                case 0
-                    dConvention = 'actual/actual';
-                case 1
-                    dConvention = '30/360';
-                case 2 
-                    dConvention = 'actual/360';
-                case 3
-                    dConvention = 'actual/365';
-                case 4
-                    dConvention = '30/360';
-            end
-            
-            disp('********* Treasury ***********')
-            disp(['Type:                 ', obj.Type])
-            disp(['Auction date:         ', datestr(obj.AuctionDate)])
-            disp(['Maturity date:        ', datestr(obj.Maturity)])
-            disp(['Time to maturity:     ', num2str(obj.Maturity - obj.AuctionDate) ' days'])
-            disp(['Coupon rate:          ', num2str(obj.CouponRate*100) ' \%'])
-            disp('********* Conventions ***********')
-            disp(['Coupon frequency:     ', couponFreq])
-            disp(['Day count convention: ', dConvention])
         end
         
     end
