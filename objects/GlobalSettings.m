@@ -6,6 +6,7 @@ classdef GlobalSettings < handle
         Holidays = holidays;            % defined holidays
         WeekdayConventions
         WeekendInd
+        DateIDFormat = 'yyyy_mm_dd';    % date format for date IDs
     end
     
 %    properties (Dependent)

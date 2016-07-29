@@ -12,6 +12,7 @@ classdef Treasury
         Period
         Basis
         CouponRate
+        ID
     end
     
     methods
@@ -44,6 +45,9 @@ classdef Treasury
                 % not yet finished
                 obj.CouponRate = 0.02;
                 
+                % get unique identifier
+                obj.ID = [obj.Name '_' datestr(obj.Maturity, GS.DateIDFormat)];
+                
             end
         end
         
@@ -68,6 +72,21 @@ classdef Treasury
             end
         end
 
+        % create info-table with main treasury characteristics
+        function infoTable = summaryTable(obj)
+            % create table with most important information
+            nObjs = length(obj);
+            allTypes = {obj.FullName}';
+            allMaturs = [obj.Maturity]';
+            allMatursString = cellstr(datestr(allMaturs));
+            allCoupons = num2str([obj.CouponRate]'*100);
+            allCoupons = [allCoupons repmat(' %', nObjs, 1)];
+            allMatursInDays = [obj.Maturity]' - [obj.AuctionDate]';
+            infoTable = table(allTypes, allCoupons, ...
+                allMatursString, allMatursInDays,...
+                'VariableNames', {'TreasuryType', 'CouponRate', ...
+                'Maturity', 'MaturityInDays'});
+        end
 
         %% low-level helper functions
         
@@ -145,18 +164,7 @@ classdef Treasury
                 disp(['Day count convention: ', dConvention])
             else
                 %%
-                % create table with most important information
-                nObjs = length(obj);
-                allTypes = {obj.FullName}';
-                allMaturs = [obj.Maturity]';
-                allMatursString = cellstr(datestr(allMaturs));
-                allCoupons = num2str([obj.CouponRate]'*100);
-                allCoupons = [allCoupons repmat(' %', nObjs, 1)];
-                allMatursInDays = [obj.Maturity]' - [obj.AuctionDate]';
-                infoTable = table(allTypes, allCoupons, ...
-                    allMatursString, allMatursInDays,...
-                    'VariableNames', {'TreasuryType', 'CouponRate', ...
-                    'Maturity', 'MaturityInDays'});
+                infoTable = summaryTable(obj);
                 disp(infoTable)
                 %%
             end
