@@ -13,6 +13,7 @@ classdef Treasury
         Basis
         CouponRate
         ID
+        NominalValue
     end
     
     methods
@@ -31,6 +32,7 @@ classdef Treasury
                 obj.Type = treasuryType;
                 obj.AuctionDate = datenum(auctionDate);
                 obj.NTerm = nTerm;
+                obj.NominalValue = 100;
                 
                 % get type specific conventions
                 res = ll_getTypeConventions(obj);
@@ -61,6 +63,20 @@ classdef Treasury
             dats = makeBusDate(dats, 'follow');
             
             assert(all(dats <= obj.Maturity))
+        end
+        
+        
+        % get cash-flows
+        function cfs = cfs(obj)
+            % get cash-flow dates
+            dats = cfdates(obj);
+            
+            % get cash-flow values
+            cfVals = obj.CouponRate .* obj.NominalValue; % coupons
+            cfVals(end) = cfVals + obj.NominalValue;
+            
+            % make table
+            cfs = array2table([dats(:) cfVals(:)], 'VariableNames', {'Date', 'CF'});
         end
         
         % check whether treasury security is traded at given date
