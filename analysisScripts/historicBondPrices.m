@@ -7,7 +7,7 @@ paramsTable = readtable(fname);
 
 %% select sub-sample
 
-xxInds = paramsTable.Date > datenum('2000-01-01');
+xxInds = paramsTable.Date > datenum('1000-01-01');
 paramsTable = paramsTable(xxInds, :);
 
 %% create bonds auctioned in given period
@@ -19,23 +19,17 @@ allTreasuries = getAllTreasuries(dateBeg, dateEnd);
 %%
 
 xxInfoTab = summaryTable(allTreasuries);
-thisTreasury = allTreasuries(3641);
 xxInds = paramsTable.Date > datenum('2001-01-04');
 svenssonParams = paramsTable(xxInds, :);
-%thisYields = thisYields(1, :);
-
-%%
-
-xx = svenssonParams;
-%xx{:, 2:end} = repmat(xx{1, 2:end}, size(xx,1), 1);
-
 
 %% get all treasury prices
 nBonds = length(allTreasuries);
 IDs = cell(nBonds, 1);
 allPrices = zeros(size(svenssonParams, 1), nBonds);
 for ii=1:nBonds
-    ii
+    if mod(ii, 1000) == 0
+        ii
+    end
     thisTreasury = allTreasuries(ii);
     
     % get ID
@@ -48,16 +42,28 @@ end
 %% make table
 
 allPricesTable = array2table(allPrices, 'VariableNames', IDs);
+allPricesTable = [svenssonParams(:, 'Date') allPricesTable];
+
+%% find certain treasuries
+
+% find all TBonds
+allTBonds = allTreasuries(strcmp({allTreasuries.Type}, 'TBond'));
+
+% get their IDs
+tbondNames = {allTBonds.ID};
 
 
 %%
-plot(svenssonParams.Date, bondPrices)
+
+%xxInd = 3822;
+
+plot(allPricesTable.Date, allPricesTable{:, tbondNames})
 grid on
 grid minor
 datetick 'x'
 hold on
 
-cfDats = cfdates(thisTreasury);
+cfDats = cfdates(allTBonds(2));
 for ii=1:length(cfDats)
     thisCfDat = cfDats(ii);
     
@@ -68,6 +74,8 @@ end
 hold off
         
     
+%% debugging
 
+xx = svenssonBondPrice(allTreasuries(xxInd), svenssonParams);
 
 

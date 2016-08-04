@@ -1,49 +1,49 @@
-function prices = svenssonBondPrice(thisBond, thisYieldCurve)
+function prices = svenssonBondPrice(thisBond, yieldCurves)
 % get bond price for given yield curve
 %
 % Inputs:
 %   thisBond        Treasury bond object
-%   thisYieldCurve  1x7 table of date and svensson parameters
+%   thisYieldCurve  nx7 table of dates and svensson parameters
 %
 % Output:
-%   price           1x2 table of date and bond price
+%   price           nx1 vector of bond prices
 
 % preallocate output
-thisDates = thisYieldCurve.Date;
-prices = zeros(size(thisDates));
+allDates = yieldCurves.Date;
+prices = NaN(size(allDates));
 
-% assign NaN to dates where bond is not traded
-tradedDateBools = isTraded(thisBond, thisDates);
-prices(~tradedDateBools) = NaN;
+% find indices of dates where bond is traded
+bondIsTraded = isTraded(thisBond, allDates);
+yieldCurveExists = ~all(isnan(yieldCurves{:, 2:end}), 2);
+tradedDateInds = bondIsTraded & yieldCurveExists;
+tradedDates = allDates(tradedDateInds);
+nTradedDays = sum(tradedDateInds);
 
-% get table of cash-flows
-thisCfs = cfs(thisBond);
-
-% for each traded day, get durations to cash-flows
-tradedDateInds = find(tradedDateBools);
-
-% get svensson parameters in matrix
-svenssonParams = thisYieldCurve{:, 2:end};
-for ii=tradedDateInds'
-
-    % get outstanding cash-flow dates
-    xxInds = thisDates(ii) < thisCfs.Date; % IMPORTANT: cash-flows of present day are not included!
-    % NOTE: this amounts to pretending that cash-flows occur in the morning.
-    outstandCfs = thisCfs(xxInds, :);
+if nTradedDays > 0 % fill in prices on traded days
     
-    % get durations to outstanding cash-flows as fractions of years
-    durs = outstandCfs.Date - thisDates(ii); % NOTE: always greater than 0; see above
-    durs = durs / 365; % NOTE: hard-coded number of days per year
+    % get table of cash-flows
+    allCfs = cfs(thisBond);
+    cashFlowVals = repmat(allCfs.CF', nTradedDays, 1);
+    nMaturs = size(cashFlowVals, 2); % get number of maturities
+    
+    % NOTE: hard-coded number of days per year
+    durs = (repmat(allCfs.Date', nTradedDays, 1) - repmat(tradedDates, 1, nMaturs))/365;
+    durs = max(0, durs); % set duration to zero for past cash-flows
+    
+    % extract svensson parameters to matrix for faster performance
+    svenssonParams = yieldCurves{tradedDateInds, 2:end};
+    
+    % get associated discount factors for traded days
+    [yields, ~] = svenssonYields(svenssonParams, durs);
     
     % get associated discount factors
-    curveParams = svenssonParams(ii, :);
-    [yields, ~] = svenssonYields(curveParams, durs');
-    %xxYield = array2table([durs(:), yields(:)/100], 'VariableNames', {'Maturity', 'Yield'});
-    discFacts = yieldToDiscount(durs, yields(:)/100);
+    discFacts = yieldToDiscount(durs, yields/100);
     
-    % get present value of cash-flows
-    vals = outstandCfs.CF;
-    prices(ii) = sum(vals .* discFacts);
+    % set NaN discount factors to zero
+    discFacts(isnan(discFacts)) = 0;
+    
+    % calculate prices
+    prices(tradedDateInds) = sum(cashFlowVals .* discFacts, 2);
+
 end
-    
 end
