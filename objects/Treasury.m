@@ -11,9 +11,12 @@ classdef Treasury
         Maturity
         Period
         Basis
-        CouponRate
         ID
         NominalValue
+    end
+    
+    properties (SetAccess = private)
+        CouponRate
     end
     
     methods
@@ -55,6 +58,14 @@ classdef Treasury
         
         %% high-level user interface methods
 
+        function obj = modifyCouponRate(obj, cpRate)
+            notValid = isempty(cpRate) | isnan(cpRate);
+            if notValid
+                1
+            end
+            obj.CouponRate = cpRate;
+        end
+        
         % get cash-flow dates
         function dats = cfdates(obj)
             dats = cfdates(obj.AuctionDate, obj.Maturity, obj.Period, obj.Basis);
@@ -96,8 +107,9 @@ classdef Treasury
             allTypes = {obj.FullName}';
             allMaturs = [obj.Maturity]';
             allMatursString = cellstr(datestr(allMaturs));
-            allCoupons = num2str([obj.CouponRate]'*100);
-            allCoupons = [allCoupons repmat(' %', nObjs, 1)];
+            allCoupons = cellstr(num2str([obj.CouponRate]'));
+            %allCoupons = num2str([obj.CouponRate]'*100, '%#5.5u');
+            %allCoupons = [allCoupons repmat(' %', nObjs, 1)];
             allMatursInDays = [obj.Maturity]' - [obj.AuctionDate]';
             infoTable = table(allTypes, allCoupons, ...
                 allMatursString, allMatursInDays,...
