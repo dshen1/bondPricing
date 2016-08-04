@@ -14,7 +14,13 @@ classdef GlobalSettings < handle
     
      methods % Constructor
         function obj = GlobalSettings()
-            obj.WeekdayConventions = GlobalSettings.getWeekdayConventions();
+            persistent WeekdayConventions;
+            
+            if isempty(WeekdayConventions)
+                WeekdayConventions = GlobalSettings.getWeekdayConventions();
+            end
+            
+            obj.WeekdayConventions = WeekdayConventions;
             % get weekend indicators in MATLAB sorting
             obj.WeekendInd = replaceVals(1:7, obj.WeekdayConventions, ...
                 'MatlabNum', 'weekendInd');

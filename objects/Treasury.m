@@ -72,8 +72,9 @@ classdef Treasury
             dats = cfdates(obj);
             
             % get cash-flow values
-            cfVals = obj.CouponRate .* obj.NominalValue; % coupons
-            cfVals(end) = cfVals + obj.NominalValue;
+            cfVals = dats;
+            cfVals(1:end) = obj.CouponRate .* obj.NominalValue; % coupons
+            cfVals(end) = cfVals(end) + obj.NominalValue;
             
             % make table
             cfs = array2table([dats(:) cfVals(:)], 'VariableNames', {'Date', 'CF'});
@@ -82,7 +83,7 @@ classdef Treasury
         % check whether treasury security is traded at given date
         function inRange = isTraded(obj, thisDate)
             if isscalar(obj)
-                inRange = obj.AuctionDate <= thisDate && thisDate <= obj.Maturity;
+                inRange = obj.AuctionDate <= thisDate & thisDate <= obj.Maturity;
             else % array of treasuries
                 inRange = [obj.AuctionDate]' <= thisDate & thisDate <= [obj.Maturity]';
             end

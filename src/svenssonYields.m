@@ -3,17 +3,35 @@ function [yields, fowRates] = svenssonYields(params, maturs)
 %
 % Inputs:
 %   params      nx6 matrix of parameters
-%   maturs      vector of maturities
+%   maturs      row vector of m maturities or nxm matrix of maturities
 
-% make sure that params are given as row
-assert(size(params, 2) == 6)
+% make sure that params are given in row dimension
+[nDays, nParams] = size(params);
+if nParams ~= 6
+    error('bondPricing:svenssonYields', ['Svensson yield curve must be parameterized '...
+        'by exactly 6 parameters'])
+end
 
-% make maturities row vector
-maturs = maturs(:)';
+[nRows, nCol] = size(maturs);
+if isvector(maturs) % vector of maturities case
+    if nRows > 1 && nRows ~= nDays % column vector
+        error('bondPricing:svenssonYields', ['If maturities are given as column vector, '...
+            'there must be exactly one row of maturities per given yield curve day.'])
+    end
+elseif nRows > 1 && nCol > 1 % maturities given as matrix
+    if nRows ~= size(params, 1)
+        error('bondPricing:svenssonYields', ['If maturities are given as matrix, '...
+            'there must be exactly one row of maturities per given yield curve day.'])
+    end
+else
+    error('bondPricing:svenssonYields', 'Maturities must be given as vector or matrix')
+end
 
 % get number of different parameter settings / maturities
-nDays = size(params, 1);
-nMaturs = length(maturs);
+nMaturs = size(maturs, 2);
+if size(maturs, 1) == 1
+    maturs = repmat(maturs, nDays, 1);
+end
 
 % extract parameters
 beta0 = repmat(params(:, 1), 1, nMaturs);
@@ -24,8 +42,8 @@ tau1 = repmat(params(:, 5), 1, nMaturs);
 tau2 = repmat(params(:, 6), 1, nMaturs);
 
 % get helping terms to reduce computational burden
-term1 = repmat(maturs, nDays, 1)./tau1;
-term2 = repmat(maturs, nDays, 1)./tau2;
+term1 = maturs./tau1;
+term2 = maturs./tau2;
 expTerm1 = exp(-term1);
 expTerm2 = exp(-term2);
 

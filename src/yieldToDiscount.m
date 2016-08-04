@@ -1,14 +1,13 @@
-function discFacts = yieldToDiscount(yields)
+function discFacts = yieldToDiscount(maturs, yields)
 % transform yields to discount factors
 % 
 % Inputs:
-%   yields  nx2 table with maturities and yields
+%   maturs  nx1 vector of maturities
+%   yields  nx1 vector of yields
 %
 % Outputs:
-%   discFacts   nx2 table with discount rates and associated maturities
+%   discFacts   nx1 vector of discount rates
 
 % calculate discount factors
-discFacts = exp((-1)*yields{:, 2} .* yields{:, 1});
+discFacts = exp((-1)*maturs .* yields);
 
-% attach meta data
-discFacts = array2table([yields{:, 1} discFacts(:)], 'VariableNames', {'Maturity', 'DiscFact'});
