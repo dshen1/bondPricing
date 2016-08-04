@@ -106,3 +106,26 @@ From https://en.wikipedia.org/wiki/Talk:United_States_Treasury_security#Dubious:
   U.S. Treasury notes and bonds, but not bills. See the day count
   article for more details.
 
+
+# Bond pricing
+
+Large-scale framework:
+- a lot of bonds
+- a lot of days
+- different yield curves
+
+Bond price evolution:
+- for each bond we need to determine all cash-flows (time consuming:
+  only once!)
+- for each date, we need to get durations to all outstanding
+  cash-flows
+- for all durations (varying number depending on outstanding
+  cash-flows) we need to evaluate the respective yield curve
+
+Coupon-rate determination: same yield curve, same durations, multiple
+bonds (different coupon rates)
+- determine cash-flow times
+- determine durations (fix number in all calculations)
+- evaluate yield curve at given durations
+- get average yield as initial coupon-rate guess
+- modify coupon-rates and hence cash-flows
