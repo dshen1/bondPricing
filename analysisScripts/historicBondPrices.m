@@ -40,6 +40,56 @@ for ii=1:nTreasuries
     
 end
 
+%% find duplicate bonds (re-openings)
+
+bondInfoTab = summaryTable(allTreasuries);
+
+% find same maturity dates and coupon rates
+duplicateCounter = grpstats(bondInfoTab(:, {'Maturity', 'CouponRate'}), ...
+    {'Maturity', 'CouponRate'});
+
+duplicates = duplicateCounter(duplicateCounter.GroupCount > 1, :);
+duplicates.Properties.RowNames = {};
+
+%% eliminate most recent duplicates
+
+nBonds = size(bondInfoTab, 1);
+elimInds = false(nBonds, 1);
+
+nDuplicates = size(duplicates, 1);
+for ii=1:nDuplicates
+    thisDuplicate = duplicates(ii, :);
+    
+    % find respective bonds
+    xxInds = bondInfoTab.Maturity == thisDuplicate.Maturity &...
+        bondInfoTab.CouponRate == thisDuplicate.CouponRate;
+    duplicateBonds = bondInfoTab(xxInds, :);
+    indNums = find(xxInds);
+    
+    % only keep bond with earliest auction date
+    [~, xxI] = min(duplicateBonds.AuctionDate);
+    
+    % find bond to keep with respect to duplicates only
+    shortElim = true(length(indNums), 1);
+    shortElim(xxI) = false;
+    
+    % insert decision with respect to all bonds
+    elimInds(xxInds) = shortElim;
+    
+end
+
+% get eliminated bonds
+toBeEliminated = bondInfoTab(elimInds, :);
+
+% eliminate bonds
+allTreasuries = allTreasuries(~elimInds);
+
+% guarantee no duplicates
+bondInfoTab = summaryTable(allTreasuries);
+duplicateCounter = grpstats(bondInfoTab(:, {'Maturity', 'CouponRate'}), ...
+    {'Maturity', 'CouponRate'});
+assert(all(duplicateCounter.GroupCount == 1))
+
 %% get all treasury prices
 
 nBonds = length(allTreasuries);
