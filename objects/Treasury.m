@@ -21,7 +21,7 @@ classdef Treasury
     
     methods
         %% constructor
-        function obj = Treasury(treasuryType, nTerm, auctionDate, GS)
+        function obj = Treasury(treasuryType, nTerm, auctionDate, GS, cpRate)
             % preallocation without input
             if nargin == 0
                 
@@ -29,6 +29,9 @@ classdef Treasury
                 
                 if ~exist('GS', 'var')
                     GS = GlobalSettings();
+                end
+                if ~exist('cpRate', 'var')
+                    cpRate = 0.02;
                 end
                 
                 % initialize treasury security
@@ -47,8 +50,7 @@ classdef Treasury
                 obj.Basis = res.basis;
                 obj.Maturity = ll_getMaturity(obj, GS);
                 
-                % not yet finished
-                obj.CouponRate = 0.02;
+                obj.CouponRate = cpRate;
                 
                 % get unique identifier
                 obj.ID = [obj.Name '_' datestr(obj.Maturity, GS.DateIDFormat)];
@@ -103,18 +105,19 @@ classdef Treasury
         % create info-table with main treasury characteristics
         function infoTable = summaryTable(obj)
             % create table with most important information
-            nObjs = length(obj);
             allTypes = {obj.FullName}';
+            allAuctions = [obj.AuctionDate]';
             allMaturs = [obj.Maturity]';
-            allMatursString = cellstr(datestr(allMaturs));
-            allCoupons = cellstr(num2str([obj.CouponRate]'));
+            %allMatursString = cellstr(datestr(allMaturs));
+            allCoupons = [obj.CouponRate]';
             %allCoupons = num2str([obj.CouponRate]'*100, '%#5.5u');
             %allCoupons = [allCoupons repmat(' %', nObjs, 1)];
             allMatursInDays = [obj.Maturity]' - [obj.AuctionDate]';
-            infoTable = table(allTypes, allCoupons, ...
-                allMatursString, allMatursInDays,...
-                'VariableNames', {'TreasuryType', 'CouponRate', ...
-                'Maturity', 'MaturityInDays'});
+            allIDs = {obj.ID}';
+            infoTable = table(allTypes, allAuctions, allMaturs, ...
+                allCoupons, allMatursInDays, allIDs, ...
+                'VariableNames', {'TreasuryType', 'AuctionDate', 'Maturity', ...
+                'CouponRate', 'MaturityInDays', 'ID'});
         end
 
         %% low-level helper functions
