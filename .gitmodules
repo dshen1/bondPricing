@@ -1,3 +1,6 @@
 [submodule "priv_bondPriceData"]
 	path = priv_bondPriceData
 	url = git@gitlab.com:cgroll/priv_bondPriceData.git
+[submodule "commonUtilities"]
+	path = commonUtilities
+	url = git@github.com:cgroll/commonUtilities.git
