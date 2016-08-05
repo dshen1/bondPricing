@@ -3,12 +3,12 @@
 % set data directory
 dataDir = '../priv_bondPriceData';
 fname = fullfile(dataDir, 'paramsData_FED.csv');
-paramsTable = readtable(fname);
+histSvenssonParams = readtable(fname);
 
-%% create bonds traded in given period
+%% create bonds that are auctioned in given period
 
-dateBeg = paramsTable.Date(1);
-dateEnd = paramsTable.Date(end);
+dateBeg = histSvenssonParams.Date(1);
+dateEnd = histSvenssonParams.Date(end);
 allTreasuries = getAllTreasuries(dateBeg, dateEnd);
 
 %% remove treasuries that are never traded within sample window
@@ -22,13 +22,13 @@ nTreasuries = length(allTreasuries);
 cpRates = zeros(nTreasuries, 1);
 for ii=1:nTreasuries
     if mod(ii, 1000) == 0
-        ii
+        ii/nTreasuries % progress display
     end
     thisBond = allTreasuries(ii);
     
     % get auction date yield curves
-    xxInd = find(paramsTable.Date >= thisBond.AuctionDate, 1, 'first');
-    thisYieldCurve = paramsTable(xxInd, :);
+    xxInd = find(histSvenssonParams.Date >= thisBond.AuctionDate, 1, 'first');
+    thisYieldCurve = histSvenssonParams(xxInd, :);
     
     % get coupon rate
     cpRate = svenssonCouponRate(thisBond, thisYieldCurve);
@@ -40,23 +40,14 @@ for ii=1:nTreasuries
     
 end
 
-
-
-%%
-
-xxInfoTab = summaryTable(allTreasuries);
-
-%%
-
-svenssonParams = paramsTable;
-
 %% get all treasury prices
+
 nBonds = length(allTreasuries);
 IDs = cell(nBonds, 1);
-allPrices = zeros(size(svenssonParams, 1), nBonds);
+allPrices = zeros(size(histSvenssonParams, 1), nBonds);
 for ii=1:nBonds
     if mod(ii, 1000) == 0
-        ii
+        ii / nBonds % display progress
     end
     thisTreasury = allTreasuries(ii);
     
@@ -64,51 +55,46 @@ for ii=1:nBonds
     IDs{ii} = thisTreasury.ID;
     
     % get prices
-    allPrices(:, ii) = svenssonBondPrice(thisTreasury, svenssonParams);
+    allPrices(:, ii) = svenssonBondPrice(thisTreasury, histSvenssonParams);
 end
 
 %% make table
 
 allPricesTable = array2table(allPrices, 'VariableNames', IDs);
-allPricesTable = [svenssonParams(:, 'Date') allPricesTable];
+allPricesTable = [histSvenssonParams(:, 'Date') allPricesTable];
 
-%% find certain treasuries
+%% save to disk as MATLAB file in wide format
 
-% find all TBonds
-allTBonds = allTreasuries(strcmp({allTreasuries.Type}, 'TBond'));
+% in matlab file format
+dataDir = '../priv_bondPriceData';
+fname = fullfile(dataDir, 'syntheticBonds.mat');
+save(fname, 'allPricesTable', 'allTreasuries')
 
-% get their IDs
-tbondNames = {allTBonds.ID};
+%% save to disk as MATLAB file in long format
 
+% make prices long format
+xxPrices = allPricesTable;
+longPrices = stack(xxPrices, tabnames(xxPrices(:, 2:end)),...
+    'NewDataVariableName', 'Price', 'IndexVariableName', 'TreasuryID');
 
-%%
+% exclude missing observations
+xxInds = ~isnan(longPrices.Price);
+longPrices = longPrices(xxInds, :);
 
-%xxInd = 3822;
+% attach additional bond information
+bondInfoTab = summaryTable(allTreasuries);
+bondInfoTab.Properties.VariableNames{'ID'} = 'TreasuryID';
+bondInfoTab.TreasuryID = categorical(bondInfoTab.TreasuryID);
+longPrices = outerjoin(longPrices, bondInfoTab, 'Keys', {'TreasuryID'}, ...
+    'MergeKeys', true, 'Type', 'left');
 
-plot(allPricesTable.Date, allPricesTable{:, tbondNames})
-grid on
-grid minor
-datetick 'x'
-hold on
+fname = fullfile(dataDir, 'syntheticBondsLongFormat.mat');
+save(fname, 'longPrices')
 
-cfDats = cfdates(allTBonds(2));
-for ii=1:length(cfDats)
-    thisCfDat = cfDats(ii);
-    
-    if thisCfDat < svenssonParams.Date(end) & thisCfDat > svenssonParams.Date(1)
-       plot([thisCfDat thisCfDat], get(gca, 'YLim'), 'r') 
-    end
-end
-hold off
-        
-    
-%% debugging
+%% save to disk as csv in long format
 
-xx = svenssonBondPrice(allTreasuries(xxInd), svenssonParams);
-
-%%
-
-xxBond = allTreasuries(11230);
-xx = svenssonCouponRate(xxBond, svenssonParams(2364, :));
-
+% write to disk
+%dataDir = '../priv_bondPriceData';
+%fname = fullfile(dataDir, 'syntheticBonds.csv');
+%writetable(longPrices, fname)
 
