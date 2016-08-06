@@ -139,7 +139,7 @@ longPrices = outerjoin(longPrices, bondInfoTab, 'Keys', {'TreasuryID'}, ...
     'MergeKeys', true, 'Type', 'left');
 
 fname = fullfile(dataDir, 'syntheticBondsLongFormat.mat');
-save(fname, 'longPrices')
+save(fname, 'longPrices', 'allTreasuries')
 
 %% save to disk as csv in long format
 
