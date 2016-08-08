@@ -105,7 +105,7 @@ classdef Treasury
         % create info-table with main treasury characteristics
         function infoTable = summaryTable(obj)
             % create table with most important information
-            allTypes = {obj.FullName}';
+            allNames = {obj.FullName}';
             allAuctions = [obj.AuctionDate]';
             allMaturs = [obj.Maturity]';
             %allMatursString = cellstr(datestr(allMaturs));
@@ -114,10 +114,12 @@ classdef Treasury
             %allCoupons = [allCoupons repmat(' %', nObjs, 1)];
             allMatursInDays = [obj.Maturity]' - [obj.AuctionDate]';
             allIDs = {obj.ID}';
-            infoTable = table(allTypes, allAuctions, allMaturs, ...
-                allCoupons, allMatursInDays, allIDs, ...
+            allTypes = {obj.Type}';
+            allTerms = [obj.NTerm]';
+            infoTable = table(allNames, allAuctions, allMaturs, ...
+                allCoupons, allMatursInDays, allIDs, allTypes, allTerms, ...
                 'VariableNames', {'TreasuryType', 'AuctionDate', 'Maturity', ...
-                'CouponRate', 'MaturityInDays', 'ID'});
+                'CouponRate', 'MaturityInDays', 'ID', 'Type', 'NTerm'});
         end
 
         %% low-level helper functions
