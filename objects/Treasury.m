@@ -11,7 +11,7 @@ classdef Treasury
         Maturity
         Period
         Basis
-        ID
+        TreasuryID
         NominalValue
     end
     
@@ -53,7 +53,7 @@ classdef Treasury
                 obj.CouponRate = cpRate;
                 
                 % get unique identifier
-                obj.ID = [obj.Name '_' datestr(obj.Maturity, GS.DateIDFormat)];
+                obj.TreasuryID = [obj.Name '_' datestr(obj.Maturity, GS.DateIDFormat)];
                 
             end
         end
@@ -113,7 +113,7 @@ classdef Treasury
             %allCoupons = num2str([obj.CouponRate]'*100, '%#5.5u');
             %allCoupons = [allCoupons repmat(' %', nObjs, 1)];
             allMatursInDays = [obj.Maturity]' - [obj.AuctionDate]';
-            allIDs = {obj.ID}';
+            allIDs = {obj.TreasuryID}';
             allTypes = {obj.Type}';
             allTerms = [obj.NTerm]';
             infoTable = table(allNames, allAuctions, allMaturs, ...
