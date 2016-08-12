@@ -102,7 +102,7 @@ for ii=1:nBonds
     thisTreasury = allTreasuries(ii);
     
     % get ID
-    IDs{ii} = thisTreasury.ID;
+    IDs{ii} = thisTreasury.TreasuryID;
     
     % get prices
     allPrices(:, ii) = svenssonBondPrice(thisTreasury, histSvenssonParams);
@@ -113,12 +113,50 @@ end
 allPricesTable = array2table(allPrices, 'VariableNames', IDs);
 allPricesTable = [histSvenssonParams(:, 'Date') allPricesTable];
 
-%% save to disk as MATLAB file in wide format
+%% attach coupon and redemption payments
 
-% in matlab file format
-dataDir = '../priv_bondPriceData';
-fname = fullfile(dataDir, 'syntheticBonds.mat');
-save(fname, 'allPricesTable', 'allTreasuries')
+bondInfoTable = summaryTable(allTreasuries);
+bondInfoTable.NominalValue = [allTreasuries.NominalValue]';
+
+% get all cash-flow dates as matrix
+pfCfDates = cfdates([allTreasuries.AuctionDate]', [allTreasuries.Maturity]', ...
+    {allTreasuries.Period}', {allTreasuries.Basis}');
+
+% transform cash-flow dates to table
+pfCfTable = array2table(pfCfDates);
+pfCfTable = [array2table(bondInfoTable.TreasuryID, 'VariableNames', {'TreasuryID'}) , pfCfTable];
+pfCfTable = stack(pfCfTable, tabnames(pfCfTable(:, 2:end)), ...
+    'NewDataVariableName', 'Date',...
+    'IndexVariableName', 'toDelete');
+pfCfTable = pfCfTable(:, {'TreasuryID', 'Date'});
+pfCfTable = pfCfTable(~isnan(pfCfTable.Date), :);
+pfCfTable = sortrows(pfCfTable, 'Date');
+
+% attach coupon payments
+pfCfTable = outerjoin(pfCfTable, ...
+    bondInfoTable(:, {'TreasuryID', 'CouponRate', 'NominalValue'}), ...
+    'Keys', 'TreasuryID', 'MergeKeys', true, 'Type', 'left');
+pfCfTable.Properties.VariableNames{'CouponRate'} = 'CouponPayment';
+pfCfTable.CouponPayment = pfCfTable.CouponPayment .* pfCfTable.NominalValue;
+pfCfTable.NominalValue = [];
+
+% attach payments at maturity
+xxMaturityTable = bondInfoTable(:, {'TreasuryID', 'Maturity', 'NominalValue'});
+xxMaturityTable.Properties.VariableNames{'Maturity'} = 'Date';
+fullCashFlows = outerjoin(pfCfTable, xxMaturityTable, 'Keys', {'TreasuryID', 'Date'},...
+    'MergeKeys', true, 'Type', 'full');
+fullCashFlows.Properties.VariableNames{'NominalValue'} = 'PrincipalPayment';
+
+% check that maturities and last coupon payments coincide
+xxMaturInds = ~isnan(fullCashFlows.PrincipalPayment);
+assert(~any(isnan(fullCashFlows.CouponPayment(xxMaturInds))))
+
+%% save to disk as MATLAB file in wide format
+% 
+% % in matlab file format
+% dataDir = '../priv_bondPriceData';
+% fname = fullfile(dataDir, 'syntheticBonds.mat');
+% save(fname, 'allPricesTable', 'allTreasuries')
 
 %% save to disk as MATLAB file in long format
 
@@ -133,10 +171,19 @@ longPrices = longPrices(xxInds, :);
 
 % attach additional bond information
 bondInfoTab = summaryTable(allTreasuries);
-bondInfoTab.Properties.VariableNames{'ID'} = 'TreasuryID';
 bondInfoTab.TreasuryID = categorical(bondInfoTab.TreasuryID);
 longPrices = outerjoin(longPrices, bondInfoTab, 'Keys', {'TreasuryID'}, ...
     'MergeKeys', true, 'Type', 'left');
+
+% attach cash-flows
+longPrices = outerjoin(longPrices, fullCashFlows, 'Keys', {'TreasuryID', 'Date'},...
+    'MergeKeys', true, 'Type', 'left');
+
+% fill NaNs in cash-flows with zeros
+xxIsNaN = isnan(longPrices.CouponPayment);
+longPrices.CouponPayment(xxIsNaN) = 0;
+xxIsNaN = isnan(longPrices.PrincipalPayment);
+longPrices.PrincipalPayment(xxIsNaN) = 0;
 
 fname = fullfile(dataDir, 'syntheticBondsLongFormat.mat');
 save(fname, 'longPrices', 'allTreasuries')
