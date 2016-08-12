@@ -257,6 +257,7 @@ xxInds = ~(btHistory.CouponPayment == 0);
 plot(btHistory.Date(xxInds), btHistory.CouponPayment(xxInds), '.')
 hold on
 plot(paramsTableBt.Date, avgYield/2, '-r')
+plot(sellDate, gain, '.r')
 hold off
 datetick 'x'
 grid on
@@ -291,6 +292,7 @@ vals = btWide{:, 2:end};
 holdingDur = zeros(nAss, 1);
 sellDate = zeros(nAss, 1);
 discRet = zeros(nAss, 1);
+gain = zeros(nAss, 1);
 
 for ii=1:nAss
     % get current time series
@@ -303,6 +305,7 @@ for ii=1:nAss
     sellDate(ii) = dats(xxIndEnd);
     holdingDur(ii) = dats(xxIndEnd) - dats(xxIndBeg);
     discRet(ii) = (thisSeries(xxIndEnd) - thisSeries(xxIndBeg))/thisSeries(xxIndBeg);
+    gain(ii) = thisSeries(xxIndEnd) - thisSeries(xxIndBeg);
     
 end
 
