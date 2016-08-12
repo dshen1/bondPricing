@@ -159,7 +159,7 @@ for ii=2:nObs
     
     % get current cash value
     currCashValue = sum(cashAccount{ii-1, 2:end}, 'omitnan');
-    cashAccount{ii, 'MorningCash'} = currCashValue;
+    cashAccount.MorningCash(ii) = currCashValue;
     
     % get current bond market
     currBondMarket = selRowsProp(bondMarket, 'Date', thisDate);
@@ -167,9 +167,9 @@ for ii=2:nObs
     % get current portfolio
     lastDate = cashAccount.Date(ii-1);
     currPf = selRowsProp(pfHistory, 'Date', lastDate);
-    currPf{:, 'Date'} = thisDate;
+    currPf.Date = thisDate*ones(size(currPf, 1), 1);
     currPf.MorningVolumes = currPf.MorningVolumes + currPf.Orders;
-    currPf{:, 'Orders'} = 0;
+    currPf.Orders = zeros(size(currPf, 1), 1);
     currPf = currPf(currPf.MorningVolumes > 0, :);
     
     % get full information on current portfolio
@@ -179,7 +179,7 @@ for ii=2:nObs
     
     % get coupon payments
     couponPayments = sum(currAssetsMarket.MorningVolumes .* currAssetsMarket.CouponPayment, 'omitnan');
-    cashAccount{ii, 'Coupons'} = couponPayments;
+    cashAccount.Coupons(ii) = couponPayments;
     
     % find selling assets
     currAssetsMarket.TTM = currAssetsMarket.Maturity - currAssetsMarket.Date;
@@ -237,77 +237,16 @@ for ii=2:nObs
         currAssetsMarket.TTM = [];
     end
     
-    % check for non-unique assets in portfolio history
-    n1 = size(currAssetsMarket, 1);
-    n2 = length(unique(currAssetsMarket.TreasuryID));
-    
     % attach orders to portfolio history
     pfHistory = [pfHistory; currAssetsMarket];
 end
 
-%% get bond portfolio history
+%% save 
 
-% get market values of individual positions
-pfHistory.EveningVolumes = pfHistory.MorningVolumes + pfHistory.Orders;
-pfHistory.MarketValue = pfHistory.EveningVolumes .* pfHistory.Price;
+dataDir = '../priv_bondPriceData';
+fname = fullfile(dataDir, 'bondPortfolioBacktestPerformance.mat');
+save(fname, 'pfHistory', 'cashAccount', 'allTreasuries')
 
-% aggregate per date
-bondValues = grpstats(pfHistory(:, {'Date', 'MarketValue'}), 'Date', 'sum');
-bondValues.Properties.VariableNames{'sum_MarketValue'} = 'MarketValue';
-
-% get cash account values in the evening
-cashAccount.Cash = sum(cashAccount{:, 2:end}, 2, 'omitnan');
-
-% join bond values and cash position
-pfValues = outerjoin(bondValues(:, {'Date', 'MarketValue'}), ...
-    cashAccount(:, {'Date', 'Cash'}), 'Keys', 'Date', 'MergeKeys', true, 'Type', 'left');
-
-pfValues = sortrows(pfValues, 'Date');
-pfValues.FullValue = pfValues.MarketValue + pfValues.Cash;
-
-%%
-
-plot(pfValues.Date, pfValues.FullValue)
-datetick 'x'
-grid on
-grid minor
-
-%% 
-
-plot(pfValues.Date, pfValues.FullValue)
-hold on
-plot(pfValues.Date, pfValues.Cash)
-plot(cashAccount.Date(2:end), cumsum(cashAccount.Coupons(2:end)))
-hold off
-datetick 'x'
-grid on
-grid minor
-
-%% Questions / challenges
-% - some kind of generateOrders
-% - when is cash burnt, and for what?
-% - how is bond portfolio represented?
-% - how to get cfs and maturities?
-% - how to get exit / sell days for bonds?
-
-
-
-%% define portfolio object
-% bond portfolio remains the same until next selling date
-% - cash position changes
-% - volumes could change
-% - long table:
-%   - assetLabel
-%   - price
-%   - volume
-
-%% define universe
-% - get cash-flow dates
-% - get universe change date
-% - define universe change: 
-%   - which asset gets removed
-%   - which asset gets in
-%   - what if day is simultaneously cash-flow date?
 
 
 
