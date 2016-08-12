@@ -188,10 +188,6 @@ longPrices.PrincipalPayment(xxIsNaN) = 0;
 fname = fullfile(dataDir, 'syntheticBondsLongFormat.mat');
 save(fname, 'longPrices', 'allTreasuries')
 
-%% save to disk as csv in long format
+%% if variables can not be saved, make them at least accessible through calling this script
 
-% write to disk
-%dataDir = '../priv_bondPriceData';
-%fname = fullfile(dataDir, 'syntheticBonds.csv');
-%writetable(longPrices, fname)
-
+clearvars -except longPrices allTreasuries
