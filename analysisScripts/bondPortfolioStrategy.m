@@ -1,70 +1,73 @@
-% % bond portfolio strategy
-% % 
-% % The strategy will be to invest in
-% % - notes only:
-% %   - replicating real ETF behavior (almost no weight on bonds)
-% %   - real ETF behavior might only be a snapshot, and in reality notes
-% %     might have been prefered only due to different coupon rates
-% % - maturities between 7 and 10 years
-% % - only notes are taken, and in three month steps
-% % - re-balancing only due to expired notes; intermediate coupon cash-flows
-% %   are not directly re-invested
+% bond portfolio strategy
 % 
-% %% load data
-% 
-% % set data directory
-% dataDir = '../priv_bondPriceData';
-% fname = fullfile(dataDir, 'syntheticBondsLongFormat.mat');
-% load(fname)
-% 
-% %% define strategy parameters
-% 
-% GS = GlobalSettings;
-% 
-% % initial wealth
-% initWealth = 10000;
-% 
-% % transaction costs
-% transCosts = 10 / 10000;
-% 
-% % define initial starting date and move to next business day
-% desiredInitDate = datenum('1975-01-02');
-% initDate = makeBusDate(desiredInitDate, 'follow', GS.Holidays, GS.WeekendInd);
-% 
-% % define TTM range
-% minDur = 7*365 + 2; % exclude 7 year notes
-% maxDur = 10*365;
-% 
-% % define grid of desired maturities for initial portfolio allocation
-% maturGrid = datetime(datevec(initDate)) + calyears(7) + calmonths(3:3:36);
-% maturGrid = datenum(maturGrid);
-% 
-% %% restrict observations with regards to chosen backtest period
-% 
-% % get observations within backtest period
-% xxInd = longPrices.Date >= initDate;
-% btPrices = longPrices(xxInd, :);
-% 
-% % get time to maturity for each observation
-% btPrices = sortrows(btPrices, 'Date');
-% btPrices.CurrentMaturity = btPrices.Maturity - btPrices.Date;
-% 
-% % eliminate 30 year bonds
-% xxInds = strcmp(btPrices.TreasuryType, '30-Year BOND');
-% btPrices = btPrices(~xxInds, :);
-% 
-% % reduce to eligible bonds with small buffer
-% xxEligible = btPrices.CurrentMaturity >= (minDur - 5) & btPrices.CurrentMaturity <= maxDur;
-% btPrices = btPrices(xxEligible, :);
-% 
-% % get relevant quantities
-% bondMarket = btPrices(:, {'Date', 'TreasuryID', 'Price', 'Maturity', 'CouponPayment'});
+% The strategy will be to invest in
+% - notes only:
+%   - replicating real ETF behavior (almost no weight on bonds)
+%   - real ETF behavior might only be a snapshot, and in reality notes
+%     might have been prefered only due to different coupon rates
+% - maturities between 7 and 10 years
+% - only notes are taken, and in three month steps
+% - re-balancing only due to expired notes; intermediate coupon cash-flows
+%   are not directly re-invested
+
+%% load data
+
+% set data directory
+dataDir = '../priv_bondPriceData';
+fname = fullfile(dataDir, 'syntheticBondsLongFormat.mat');
+load(fname)
+
+%% define strategy parameters
+
+GS = GlobalSettings;
+
+% initial wealth
+initWealth = 10000;
+
+% transaction costs
+transCosts = 10 / 10000;
+
+% define initial starting date and move to next business day
+desiredInitDate = datenum('1975-01-02');
+initDate = makeBusDate(desiredInitDate, 'follow', GS.Holidays, GS.WeekendInd);
+
+% define TTM range
+minDur = 7*365 + 2; % exclude 7 year notes
+maxDur = 10*365;
+
+% define grid of desired maturities for initial portfolio allocation
+maturGrid = datetime(datevec(initDate)) + calyears(7) + calmonths(3:3:36);
+maturGrid = datenum(maturGrid);
+
+%% restrict observations with regards to chosen backtest period
+
+% get observations within backtest period
+xxInd = longPrices.Date >= initDate;
+btPrices = longPrices(xxInd, :);
+
+% join additional information to prices
+bondInfoTable = summaryTable(allTreasuries);
+btPrices = outerjoin(btPrices, bondInfoTable, 'Keys', {'TreasuryID'},...
+    'MergeKeys', true, 'Type', 'left');
+
+% get time to maturity for each observation
+btPrices = sortrows(btPrices, 'Date');
+btPrices.CurrentMaturity = btPrices.Maturity - btPrices.Date;
+
+% eliminate 30 year bonds
+xxInds = strcmp(btPrices.TreasuryType, '30-Year BOND');
+btPrices = btPrices(~xxInds, :);
+
+% reduce to eligible bonds with small buffer
+xxEligible = btPrices.CurrentMaturity >= (minDur - 5) & btPrices.CurrentMaturity <= maxDur;
+btPrices = btPrices(xxEligible, :);
+
+% get relevant quantities
+bondMarket = btPrices(:, {'Date', 'TreasuryID', 'Price', 'Maturity', 'CouponPayment'});
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% start backtest
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-load devWkspace
 
 %% pre-allocate bond portfolio book-keeping
 

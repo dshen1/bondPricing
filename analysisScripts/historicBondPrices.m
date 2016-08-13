@@ -185,6 +185,9 @@ longPrices.CouponPayment(xxIsNaN) = 0;
 xxIsNaN = isnan(longPrices.PrincipalPayment);
 longPrices.PrincipalPayment(xxIsNaN) = 0;
 
+% remove unrequired columns to save memory
+longPrices = longPrices(:, {'Date', 'TreasuryID', 'Price', 'CouponPayment', 'PrincipalPayment'});
+
 fname = fullfile(dataDir, 'syntheticBondsLongFormat.mat');
 save(fname, 'longPrices', 'allTreasuries')
 
