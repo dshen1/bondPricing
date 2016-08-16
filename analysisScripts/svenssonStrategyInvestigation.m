@@ -37,7 +37,8 @@ strategyParams.maturGrid = datenum(maturGrid);
 
 if doRecompute
     [longPrices, allTreasuries] = createSynthBondMarket_svensson(paramsTable);
-    [pfHistory, cashAccount] = backtestRollingStrategy(strategyParams, longPrices, allTreasuries);
+    [pfHistory, cashAccount, pfTimeTrend, macDurs] = backtestRollingStrategy(strategyParams, ...
+        longPrices, allTreasuries, paramsTable);
 end
 
 %% visualize

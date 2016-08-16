@@ -1,4 +1,4 @@
-function [pfHistory, cashAccount] = backtestRollingStrategy(strategyParams, longPrices, allTreasuries)
+function [pfHistory, cashAccount, pfTimeTrend, macDurs] = backtestRollingStrategy(strategyParams, longPrices, allTreasuries, paramsTable)
 % backtest bond rolling strategy with given bond market (universe, prices)
 %
 % Inputs:
@@ -63,6 +63,13 @@ cashAccount{1, 'MorningCash'} = initWealth;
 % initialize empty bond portfolio history
 colNames = {'Date', 'TreasuryID', 'Price', 'MorningVolumes', 'Orders', 'CouponPayment', 'TransactionPrices'};
 pfHistory = cell2table(cell(0, length(colNames)), 'VariableNames', colNames);
+
+% preallocate sensitivity measures
+xxMacDurs = [allDates nan(length(allDates), 1)];
+macDurs = array2table(xxMacDurs, 'VariableNames', {'Date', 'MacDur'});
+
+xxTrend = [allDates nan(length(allDates), 2)];
+pfTimeTrend = array2table(xxTrend, 'VariableNames', {'Date', 'CurrentValue', 'TimeTrend'});
 
 clearvars allDates xxVals colNames
 
@@ -220,6 +227,24 @@ for ii=2:nObs
         currAssetsMarket.TTM = [];
     end
     
+    %% get sensitivity measures for current portfolio
+    
+    % fix current yield curve
+    xxInd = find(paramsTable.Date == thisDate);
+    if xxInd == size(paramsTable, 1) % if last entry
+        yields = [paramsTable(xxInd, :); paramsTable(xxInd, :)];
+        yields.Date(2) = yields.Date(1) + 1;
+    else
+        yields = paramsTable(xxInd:(xxInd + 1), :);
+        yields{2:end, 2:end} = repmat(yields{1, 2:end}, 1, 1);
+    end
+    
+    % get predicted portfolio values and durations
+    [forecastBondValues, pfMacDurs, ~] = evalFixedBondPf(yields, currAssetsMarket, cashAccount(ii, :), allTreasuries);
+    macDurs.MacDur(ii) = pfMacDurs.MacDur(1);
+    pfTimeTrend.CurrentValue(ii) = forecastBondValues.PfValForecast(1);
+    pfTimeTrend.TimeTrend(ii) = forecastBondValues.PfValForecast(2);
+
     % attach orders to portfolio history
     pfHistory = [pfHistory; currAssetsMarket];
 end

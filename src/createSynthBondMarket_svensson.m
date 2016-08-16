@@ -111,7 +111,7 @@ for ii=1:nBonds
     IDs{ii} = thisTreasury.TreasuryID;
     
     % get prices
-    allPrices(:, ii) = svenssonBondPrice(thisTreasury, histSvenssonParams);
+    [allPrices(:, ii), ~] = svenssonBondPrice(thisTreasury, histSvenssonParams);
 end
 
 %% make table
