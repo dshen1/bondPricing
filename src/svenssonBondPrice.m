@@ -1,4 +1,4 @@
-function prices = svenssonBondPrice(thisBond, yieldCurves)
+function [prices, macDurs] = svenssonBondPrice(thisBond, yieldCurves)
 % get bond price for given yield curve
 %
 % Inputs:
@@ -7,10 +7,12 @@ function prices = svenssonBondPrice(thisBond, yieldCurves)
 %
 % Output:
 %   price           nx1 vector of bond prices
+%   macDurs         nx1 vector of Macaulay durations
 
 % preallocate output
 allDates = yieldCurves.Date;
 prices = NaN(size(allDates));
+macDurs = NaN(size(allDates));
 
 % find indices of dates where bond is traded
 bondIsTraded = isTraded(thisBond, allDates);
@@ -44,6 +46,9 @@ if nTradedDays > 0 % fill in prices on traded days
     
     % calculate prices
     prices(tradedDateInds) = sum(cashFlowVals .* discFacts, 2);
+    
+    % calculate macaulay durations
+    macDurs(tradedDateInds) = sum(durs .* cashFlowVals .* discFacts, 2) ./ prices(tradedDateInds);
 
 end
 end
