@@ -189,23 +189,7 @@ title('TTMs of portfolio vs desired TTMs')
 
 %% get bond portfolio performance
 
-% get market values of individual positions
-btHistory.EveningVolumes = btHistory.MorningVolumes + btHistory.Orders;
-btHistory.MarketValue = btHistory.EveningVolumes .* btHistory.Price;
-
-% aggregate per date
-bondValues = grpstats(btHistory(:, {'Date', 'MarketValue'}), 'Date', 'sum');
-bondValues.Properties.VariableNames{'sum_MarketValue'} = 'MarketValue';
-
-% get cash account values in the evening
-cashAccount.Cash = sum(cashAccount{:, 2:end}, 2, 'omitnan');
-
-% join bond values and cash position
-pfValues = outerjoin(bondValues(:, {'Date', 'MarketValue'}), ...
-    cashAccount(:, {'Date', 'Cash'}), 'Keys', 'Date', 'MergeKeys', true, 'Type', 'left');
-
-pfValues = sortrows(pfValues, 'Date');
-pfValues.FullValue = pfValues.MarketValue + pfValues.Cash;
+pfValues = pfPerformance(btHistory, cashAccount);
 
 % plot portfolio performance
 figure('Position', [50 50 1200 600])
@@ -343,6 +327,11 @@ title('Distributions per bond position')
 
 lastDate = max(btHistory.Date);
 lastDatePf = selRowsProp(btHistory, 'Date', lastDate);
+
+% get market value of each position
+lastDatePf.EveningVolumes = lastDatePf.MorningVolumes + lastDatePf.Orders;
+lastDatePf.MarketValue = lastDatePf.EveningVolumes .* lastDatePf.Price;
+
 figure('Position', [50 50 1200 600])
 plot(sort(lastDatePf.MarketValue), '.')
 grid on
