@@ -13,13 +13,13 @@ classdef Treasury
         Basis
         TreasuryID
         NominalValue
-        CfDates
-        CfValues
-        CfTable
     end
     
     properties (SetAccess = private)
         CouponRate
+        CfDates
+        CfValues
+        CfTable
     end
     
     methods
@@ -80,6 +80,17 @@ classdef Treasury
                 1
             end
             obj.CouponRate = cpRate;
+            
+            % determine cash-flows
+            [dats, cfVals] = ll_cfs(obj);
+            obj.CfDates = dats;
+            obj.CfValues = cfVals;
+            
+            % set up cash-flow table
+            nams = repmat({obj.TreasuryID}, length(dats), 1);
+            cfs = table(nams, dats, cfVals, ...
+                'VariableNames', {'TreasuryID', 'Date', 'CF'});
+            obj.CfTable = cfs;
         end
         
         % get cash-flows
