@@ -24,12 +24,13 @@ nTradedDays = sum(tradedDateInds);
 if nTradedDays > 0 % fill in prices on traded days
     
     % get table of cash-flows
-    allCfs = cfs(thisBond);
-    cashFlowVals = repmat(allCfs.CF', nTradedDays, 1);
+    xxCashFlowValues = thisBond.CfValues;
+    xxCashFlowDates = thisBond.CfDates;
+    cashFlowVals = repmat(xxCashFlowValues', nTradedDays, 1);
     nMaturs = size(cashFlowVals, 2); % get number of maturities
     
     % NOTE: hard-coded number of days per year
-    durs = (repmat(allCfs.Date', nTradedDays, 1) - repmat(tradedDates, 1, nMaturs))/365;
+    durs = (repmat(xxCashFlowDates', nTradedDays, 1) - repmat(tradedDates, 1, nMaturs))/365;
     durs = max(0, durs); % set duration to zero for past cash-flows
     
     % extract svensson parameters to matrix for faster performance
