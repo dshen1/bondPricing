@@ -39,8 +39,7 @@ for ii=1:genInfo.nBonds
     [allPrices(:, ii), macDurs(:, ii)] = svenssonBondPrice(thisComponents(ii), yields);
     
     % cash flows
-    xxCashFlows = cfs(thisComponents(ii));
-    xxCashFlows.TreasuryID = repmat({thisComponents(ii).TreasuryID}, size(xxCashFlows, 1), 1);
+    xxCashFlows = thisComponents(ii).CfTable;
     cashFlows = [cashFlows; xxCashFlows];
 end
 

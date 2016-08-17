@@ -13,6 +13,9 @@ classdef Treasury
         Basis
         TreasuryID
         NominalValue
+        CfDates
+        CfValues
+        CfTable
     end
     
     properties (SetAccess = private)
@@ -55,6 +58,17 @@ classdef Treasury
                 % get unique identifier
                 obj.TreasuryID = [obj.Name '_' datestr(obj.Maturity, GS.DateIDFormat)];
                 
+                % determine cash-flows
+                [dats, cfVals] = ll_cfs(obj);
+                obj.CfDates = dats;
+                obj.CfValues = cfVals;
+                
+                % set up cash-flow table
+                nams = repmat({obj.TreasuryID}, length(dats), 1);
+                cfs = table(nams, dats, cfVals, ...
+                    'VariableNames', {'TreasuryID', 'Date', 'CF'});                
+                obj.CfTable = cfs;
+                
             end
         end
         
@@ -68,29 +82,18 @@ classdef Treasury
             obj.CouponRate = cpRate;
         end
         
-        % get cash-flow dates
-        function dats = cfdates(obj)
+        % get cash-flows
+        function [dats, cfVals] = ll_cfs(obj)
+            % get cash-flow dates
             dats = cfdates(obj.AuctionDate, obj.Maturity, obj.Period, obj.Basis);
             
             % make business days
             dats = makeBusDate(dats, 'follow');
             
-            assert(all(dats <= obj.Maturity))
-        end
-        
-        
-        % get cash-flows
-        function cfs = cfs(obj)
-            % get cash-flow dates
-            dats = cfdates(obj);
-            
             % get cash-flow values
             cfVals = dats;
             cfVals(1:end) = obj.CouponRate .* obj.NominalValue; % coupons
             cfVals(end) = cfVals(end) + obj.NominalValue;
-            
-            % make table
-            cfs = array2table([dats(:) cfVals(:)], 'VariableNames', {'Date', 'CF'});
         end
         
         % check whether treasury security is traded at given date

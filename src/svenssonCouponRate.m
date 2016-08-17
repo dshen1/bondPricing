@@ -18,7 +18,7 @@ else
     thisDate = yieldCurve.Date;
     
     % get cash-flow dates
-    allCfDates = cfdates(thisBond)';
+    allCfDates = thisBond.CfDates';
     nCfs = length(allCfDates);
     
     % get durations
