@@ -129,6 +129,13 @@ cashAccount{1, 'Transactions'} = (-1)*cashSpent;
 % attach to book-keeping
 pfHistory = [pfHistory; initOrders];
 
+% store in running variable
+lastPfHistory = initOrders;
+
+% store current bonds as Treasury objects in running variable
+xxInds = ismember(bondInfoTable.TreasuryID, initOrders.TreasuryID);
+thisComponents = allTreasuries(xxInds);
+        
 %% conduct backtest
 % for each day:
 % - get current bond market
@@ -155,8 +162,7 @@ for ii=2:nObs
     currBondMarket = selRowsProp(bondMarket, 'Date', thisDate);
     
     % get current portfolio
-    lastDate = cashAccount.Date(ii-1);
-    currPf = selRowsProp(pfHistory, 'Date', lastDate);
+    currPf = lastPfHistory;
     currPf.Date = thisDate*ones(size(currPf, 1), 1);
     currPf.MorningVolumes = currPf.MorningVolumes + currPf.Orders;
     currPf.Orders = zeros(size(currPf, 1), 1);
@@ -220,27 +226,28 @@ for ii=2:nObs
         end
         currAssetsMarket.Maturity = [];
         
+        % update current bonds as Treasury objects
+        xxKeep = (currAssetsMarket.MorningVolumes + currAssetsMarket.Orders > 1);
+        xxKeepUniverse = currAssetsMarket(xxKeep, :);
+        xxInds = ismember(bondInfoTable.TreasuryID, xxKeepUniverse.TreasuryID);
+        thisComponents = allTreasuries(xxInds);
+        
     else % NO TRADE
-        % attach orders
-        currAssetsMarket.Maturity = currAssetsMarket.Price;
-        currAssetsMarket.Properties.VariableNames{'Maturity'} = 'TransactionPrices';
+        % attach orders / previously did take 17s
+        currAssetsMarket.Maturity = [];
         currAssetsMarket.TTM = [];
+        currAssetsMarket.TransactionPrices = currAssetsMarket.Price;
     end
     
     %% get sensitivity measures for current portfolio
     
-    % get current bonds as Treasury objects
-    xxInds = ismember(bondInfoTable.TreasuryID, currPf.TreasuryID);
-    thisComponents = allTreasuries(xxInds);
-    
     % fix current yield curve
     xxInd = find(paramsTable.Date == thisDate);
+    yields = [paramsTable(xxInd, :); paramsTable(xxInd, :)];
     if xxInd == size(paramsTable, 1) % if last entry
-        yields = [paramsTable(xxInd, :); paramsTable(xxInd, :)];
         yields.Date(2) = yields.Date(1) + 1;
     else
-        yields = paramsTable(xxInd:(xxInd + 1), :);
-        yields{2:end, 2:end} = repmat(yields{1, 2:end}, 1, 1);
+        yields.Date(2) = paramsTable.Date(xxInd + 1);
     end
     
     % get predicted portfolio values and durations
@@ -251,4 +258,7 @@ for ii=2:nObs
 
     % attach orders to portfolio history
     pfHistory = [pfHistory; currAssetsMarket];
+    
+    % store in running variables
+    lastPfHistory = currAssetsMarket;
 end
