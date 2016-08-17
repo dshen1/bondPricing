@@ -1,4 +1,4 @@
-function [forecastBondValues, pfMacDurs, pfWgts] = evalFixedBondPf(yields, pfHistory, cashAccount, allTreasuries)
+function [forecastPfValue, pfMacDurs, pfWgts] = evalFixedBondPf(yields, pfHistory, cashAccount, thisComponents)
 %% open questions / problems
 % - should morning or evening volumes be investigated? 
 % - morning volumes it should be if sensitivity analysis should have an
@@ -11,22 +11,20 @@ function [forecastBondValues, pfMacDurs, pfWgts] = evalFixedBondPf(yields, pfHis
 
 genInfo.nForecast = size(yields, 1);
 genInfo.thisDate = yields.Date(1);
+genInfo.nBonds = length(thisComponents);
+genInfo.treasuryLabels = {thisComponents.TreasuryID}';
 
 %% get current portfolio in long format
 
 % select long format history at respective date
 currPf = selRowsProp(pfHistory, 'Date', genInfo.thisDate);
 currPf.EveningVolumes = currPf.MorningVolumes + currPf.Orders;
-currPf = currPf(currPf.EveningVolumes > 0, :);
+%currPf = currPf(currPf.EveningVolumes > 0, :);
 
-%% get associated treasuries
-
-bondInfoTable = summaryTable(allTreasuries);
-xxInds = ismember(bondInfoTable.TreasuryID, currPf.TreasuryID);
-thisComponents = allTreasuries(xxInds);
-
-% add information to general info
-genInfo.nBonds = length(thisComponents);
+% get current volumes in correct order
+xx = currPf;
+xx.TreasuryID = cellstr(xx.TreasuryID);
+genInfo.currVols = replaceVals(genInfo.treasuryLabels, xx, 'TreasuryID', 'EveningVolumes');
 
 %% forecast bond prices, durations and cash-flows
 
@@ -47,9 +45,9 @@ for ii=1:genInfo.nBonds
 end
 
 % attach metadata
-allPrices = array2table(allPrices, 'VariableNames', {thisComponents.TreasuryID});
+allPrices = array2table(allPrices, 'VariableNames', genInfo.treasuryLabels);
 allPrices = [yields(:, 'Date'), allPrices];
-macDurs = array2table(macDurs, 'VariableNames', {thisComponents.TreasuryID});
+macDurs = array2table(macDurs, 'VariableNames', genInfo.treasuryLabels);
 macDurs = [yields(:, 'Date'), macDurs];
 
 %% transform cash-flows to wide table
@@ -68,7 +66,8 @@ cashFlowsWide{1, 2:end} = 0;
 
 % include cash-flows again into bond price series
 adjustedPrices = allPrices;
-adjustedPrices{:, 2:end} = adjustedPrices{:, 2:end} + cumsum(cashFlowsWide{:, 2:end}, 1);
+adjustedPrices{:, 2:end} = adjustedPrices{:, 2:end} + ...
+    cumsum(cashFlowsWide{:, genInfo.treasuryLabels}, 1);
 
 %% plot predicted prices vs cash-flow adjusted prices
 
@@ -85,30 +84,30 @@ adjustedPrices{:, 2:end} = adjustedPrices{:, 2:end} + cumsum(cashFlowsWide{:, 2:
 %% get portfolio values
 
 % multiply bonds with respective volumes
-forecastBondValues = adjustedPrices{:, cellstr(currPf.TreasuryID)} * currPf.EveningVolumes;
+forecastPfValue = adjustedPrices{:, cellstr(genInfo.treasuryLabels)} * genInfo.currVols;
 
 % add current cash value
 currCash = selRowsKey(cashAccount, 'Date', genInfo.thisDate);
 currCash = sum(currCash{:, 2:end}, 2, 'omitnan');
 
 % add to bond values
-forecastBondValues = array2table(forecastBondValues + currCash, ...
+forecastPfValue = array2table(forecastPfValue + currCash, ...
     'VariableNames', {'PfValForecast'});
 
 % attach dates
-forecastBondValues = [yields(:, 'Date'), forecastBondValues];
+forecastPfValue = [yields(:, 'Date'), forecastPfValue];
 
 %% get portfolio durations
 
 % get true bond values
-forecastUnadjValues = allPrices{:, cellstr(currPf.TreasuryID)} .* ...
-    repmat(currPf.EveningVolumes', genInfo.nForecast, 1);
+forecastUnadjValues = allPrices{:, cellstr(genInfo.treasuryLabels)} .* ...
+    repmat(genInfo.currVols', genInfo.nForecast, 1);
 
 % get portfolio weights
-pfWgts = forecastUnadjValues ./ repmat(forecastBondValues.PfValForecast, 1, size(allPrices, 2)-1);
+pfWgts = forecastUnadjValues ./ repmat(forecastPfValue.PfValForecast, 1, genInfo.nBonds);
 
 % get portfolio durations
-pfMacDurs = sum(macDurs{:, cellstr(currPf.TreasuryID)} .* pfWgts, 2);
+pfMacDurs = sum(macDurs{:, cellstr(genInfo.treasuryLabels)} .* pfWgts, 2);
 
 % attach dates
 pfMacDurs = [yields(:, 'Date'), array2table(pfMacDurs, 'VariableNames', {'MacDur'})];

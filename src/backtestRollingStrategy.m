@@ -229,6 +229,10 @@ for ii=2:nObs
     
     %% get sensitivity measures for current portfolio
     
+    % get current bonds as Treasury objects
+    xxInds = ismember(bondInfoTable.TreasuryID, currPf.TreasuryID);
+    thisComponents = allTreasuries(xxInds);
+    
     % fix current yield curve
     xxInd = find(paramsTable.Date == thisDate);
     if xxInd == size(paramsTable, 1) % if last entry
@@ -240,7 +244,7 @@ for ii=2:nObs
     end
     
     % get predicted portfolio values and durations
-    [forecastBondValues, pfMacDurs, ~] = evalFixedBondPf(yields, currAssetsMarket, cashAccount(ii, :), allTreasuries);
+    [forecastBondValues, pfMacDurs, ~] = evalFixedBondPf(yields, currAssetsMarket, cashAccount(ii, :), thisComponents);
     macDurs.MacDur(ii) = pfMacDurs.MacDur(1);
     pfTimeTrend.CurrentValue(ii) = forecastBondValues.PfValForecast(1);
     pfTimeTrend.TimeTrend(ii) = forecastBondValues.PfValForecast(2);
