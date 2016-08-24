@@ -77,7 +77,7 @@ classdef Treasury
         function obj = modifyCouponRate(obj, cpRate)
             notValid = isempty(cpRate) | isnan(cpRate);
             if notValid
-                1
+                error('Treasury:modifyCouponRate', 'Invalid coupon rate');
             end
             obj.CouponRate = cpRate;
             
