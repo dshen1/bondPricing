@@ -151,7 +151,7 @@ grid minor
 xlabel('Year')
 ylabel('Bond price')
 
-exportFig(f, 'zeroCouponConstYield', '.', genInfo.fmt, genInfo.figClose, false)
+exportFig(f, 'zeroCouponConstYield', '.', genInfo.fmt, genInfo.figClose, true)
 
 
 %% bond price evolution figures
