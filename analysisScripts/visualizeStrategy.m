@@ -297,7 +297,7 @@ title('logarithmic returns (%)')
 
 %% moving average of returns
 
-[xxShort, ~] = movavg(logRets, 300, 300, 0);
+xxShort = movingAvg(logRets, 300, true);
 figure('Position', [50 50 1200 600])
 plot(pfValues.Date(2:end), xxShort)
 hold on
