@@ -27,7 +27,7 @@ cpRates = zeros(nTreasuries, 1);
 for ii=1:nTreasuries
     if mod(ii, 1000) == 0
         fracProgress = ii/nTreasuries;
-        fprintf('\nProgress of bond coupon rate determination: %1.3f %%', fracProgress)
+        fprintf('\nProgress of bond coupon rate determination: %1.3f %%', fracProgress*100)
     end
     thisBond = allTreasuries(ii);
     

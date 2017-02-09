@@ -145,6 +145,9 @@ widePrices = unstack(btPrices(:, {'Date', 'TreasuryID', 'Price'}), 'Price', 'Tre
 
 subplot(3, 1, 3)
 plot(widePrices.Date, widePrices{:, 2:end}, 'Color', 0.4*[1, 1, 1])
+hold on
+plot([widePrices.Date(1), widePrices.Date(end)], 100*[1, 1], '-r')
+hold off
 datetick 'x'
 grid on
 grid minor
@@ -240,11 +243,11 @@ ylabel('Portfolio returns')
 
 %% plot change ratio over time
 
-ratios = yieldRets ./ logRets;
+ratios = (-1)*logRets ./ yieldRets;
 dats = benchYield.Date(2:end);
 xxInds = abs(yieldRets)*100 > 0.15 & abs(logRets)*100 > 0.15;
-[xxShort, ~] = movavg(ratios, 300, 300, 0);
-[xxShort2, ~] = movavg(ratios(xxInds), 300, 300, 0);
+xxShort = movingAvg(ratios, 300, true);
+xxShort2 = movingAvg(ratios(xxInds), 300, true);
 
 figure('Position', [50 50 1200 600])
 subplot(3, 1, 1)
@@ -252,21 +255,21 @@ plot(dats(xxInds), ratios(xxInds))
 datetick 'x'
 grid on
 grid minor
-title('Yield change / portfolio return ratio: outlier free')
+title('Portfolio return / yield change ratio: outlier free')
 
 subplot(3, 1, 2)
 plot(dats, xxShort)
 datetick 'x'
 grid on
 grid minor
-title('Yield change / portfolio return ratio: movAvg')
+title('Portfolio return / yield change ratio: movAvg - unstable close to zero returns')
 
 subplot(3, 1, 3)
 plot(dats(xxInds), xxShort2)
 datetick 'x'
 grid on
 grid minor
-title('Yield change / portfolio return ratio: robust movAvg')
+title('Portfolio return / yield change ratio: robust movAvg')
 
 %% find observations deviating from diagonal
 

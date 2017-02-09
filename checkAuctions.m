@@ -57,3 +57,8 @@ matchFreq = sum(xxPerfectMatch) / size(matchedSecurities, 1);
 
 % inspect miss-machted securities
 missMatched = matchedSecurities(~xxPerfectMatch, :);
+
+%% get number of unrequired simulated securities
+
+nOverhang = size(synthAuctions, 1) - size(realAuctions, 1);
+overhangRatio = nOverhang / size(synthAuctions, 1);
