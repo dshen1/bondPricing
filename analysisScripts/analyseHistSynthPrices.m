@@ -4,7 +4,7 @@
 
 % set data directory
 dataDir = '../priv_bondPriceData';
-fname = fullfile(dataDir, 'syntheticBondsLongFormat.mat');
+fname = fullfile(dataDir, 'syntheticRealBondsLongFormat.mat');
 load(fname)
 
 %% load historic estimated parameters
@@ -37,13 +37,13 @@ for ii=1:nTreasuryTypes
     thisSecurs = selRowsProp(allNotesBondsTable, 'TreasuryType', thisType);
 
     % plot coupon rates
-    plot(thisSecurs.AuctionDate, thisSecurs.CouponRate, '.')
+    plot(thisSecurs.AuctionDate, thisSecurs.CouponRate * 100, '.')
     datetick 'x'
     xlabel('Auction date')
     title(thisType)
     grid on
     grid minor
-    set(gca, 'YLim', [0 0.1])
+    set(gca, 'YLim', [0 10])
     
 end
 
@@ -61,8 +61,12 @@ nTypes = length(treasuryTypes);
 
 %%
 
-for ii=10
-    %figure(ii)
+colors = evalColormap(1:nTypes, 'jet', [1, nTypes]);
+
+%%
+
+for ii=1:10
+    figure(ii)
     
     % get current type
     thisType = treasuryTypes(ii);
@@ -76,7 +80,11 @@ for ii=10
     thisTypeTreasuries = xx(xxInds, :);
     
     % get associated prices
-    allTypePrices = selRowsProp(longPrices, 'TreasuryID', thisTypeTreasuries.ID);
+    allTypePrices = selRowsProp(longPrices, 'TreasuryID', thisTypeTreasuries.TreasuryID);
+    
+    % join maturity dates
+    allTypePrices = outerjoin(allTypePrices, bondInfoTable(:, {'TreasuryID', 'Maturity'}), ...
+        'Keys', 'TreasuryID', 'MergeKeys', true, 'Type', 'left');
     
     % calculate time to maturity
     allTypePrices.TTM = allTypePrices.Maturity - allTypePrices.Date;
@@ -88,8 +96,10 @@ for ii=10
     
     % plot
     %plot(allTypePrices.TTM, allTypePrices.Price, '.')
+    xxInds = thisTypePrices.TTM == 0;
+    thisTypePrices = thisTypePrices(~xxInds, :);
     
-    plot(thisTypePrices.TTM, thisTypePrices{:, 2:end})
+    plot(thisTypePrices.TTM, thisTypePrices{:, 2:end}, 'Color', colors(ii, :))
     grid on
     grid minor
     %%
@@ -97,7 +107,7 @@ end
 
 %% compare auction prices
 
-% aution prices
+% auction prices: first observable price
 auctionPrices = varfun(@(x)x(find(~isnan(x), 1, 'last')), thisTypePrices(:, 2:end));
 auctionPrices.Properties.VariableNames = tabnames(thisTypePrices(:, 2:end));
 
@@ -105,13 +115,8 @@ auctionPrices = stack(auctionPrices, tabnames(auctionPrices), ...
     'NewDataVariableName', 'AuctionPrice',...
     'IndexVariableName', {'TreasuryID', });
 
-% get associated coupon rates
-auctionPrices.CouponRate = replaceVals(auctionPrices.TreasuryID, ...
-    thisTypeTreasuries, 'ID', 'CouponRate');
-
-% get associated auction dates
-auctionPrices.AuctionDate = replaceVals(auctionPrices.TreasuryID, ...
-    thisTypeTreasuries, 'ID', 'AuctionDate');
+auctionPrices = outerjoin(auctionPrices, thisTypeTreasuries(:, {'TreasuryID', 'AuctionDate', 'CouponRate'}),...
+    'Keys', 'TreasuryID', 'MergeKeys', true, 'Type', 'left');
 
 %%
 figure()

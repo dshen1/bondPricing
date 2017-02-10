@@ -103,7 +103,7 @@ allPrices = zeros(size(histSvenssonParams, 1), nBonds);
 for ii=1:nBonds
     if mod(ii, 1000) == 0
         fracProgress = ii/nBonds;
-        fprintf('\nProgress of bond price determination: %1.3f  %%', fracProgress)
+        fprintf('\nProgress of bond price determination: %1.3f  %%', fracProgress*100)
     end
     thisTreasury = allTreasuries(ii);
     
