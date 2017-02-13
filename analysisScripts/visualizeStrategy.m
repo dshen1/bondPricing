@@ -1,4 +1,31 @@
-function visualizeStrategy(paramsTable, allTreasuries, longPrices, pfHistory, cashAccount, strategyParams)
+function visualizeStrategy(paramsTable, allTreasuries, longPrices, pfHistory, cashAccount, strategyParams, stratName)
+% visual inspection of backtested bond portfolio strategy
+%
+% Inputs:
+%   stratName       if not empty this will determine the name of output
+%                   files
+
+doExportPics = false;
+
+if exist('stratName', 'var') == true
+    if ~isempty(stratName)
+        doExportPics = true;
+    end
+end
+
+%% specify settings for graphics
+
+genInfo.pos = [50 50 1200 600];
+genInfo.fmt = 'png';
+genInfo.picsDir = '../../dissDataAndPics/bondPricing/';
+
+if doExportPics
+    genInfo.stratName = stratName;
+    genInfo.suffix = ['_' genInfo.stratName];
+end
+genInfo.figClose = true;
+
+%%
 
 % remove days with NaN in parameters
 paramsTable = paramsTable(~any(isnan(paramsTable{:, 2:end}), 2), :);
@@ -39,8 +66,11 @@ timeGrid = fullTimeGrid(dateInds, matursInds);
 maturSurfaceGrid = fullMaturGrid(dateInds, matursInds);
 yields = fullYields(dateInds, matursInds);
 
+%% visualize yield curve surface
+
 % plot yield curves over time
-figure('Position', [50 50 1200 600])
+f = figure('Position', genInfo.pos);
+
 h = surf(timeGrid, maturSurfaceGrid, yields);
 set(h, 'EdgeColor', 'none')
 shading interp
@@ -53,8 +83,14 @@ grid on
 grid minor
 caxis([0 12])
 
+% write to disk
+exportFig(f, ['yieldCurveSurface' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
+
+%% surface in gray
+
 % different angle
-figure('Position', [50 50 1200 600])
+f = figure('Position', genInfo.pos);
+
 h = surf(timeGrid, maturSurfaceGrid, yields);
 colormap gray
 set(h, 'EdgeColor', 'none')
@@ -68,6 +104,9 @@ datetick 'x'
 grid on
 grid minor
 caxis([0 20])
+
+% write to disk
+exportFig(f, ['yieldCurveSurfaceGray' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
 
 %% get eligible bonds for strategy and visualize them
 
@@ -98,7 +137,9 @@ btPrices = btPrices(xxEligible, :);
 nEligibleBonds = grpstats(btPrices(:, {'Date', 'CurrentMaturity'}), 'Date');
 nEligibleBonds = sortrows(nEligibleBonds, 'Date');
 
-figure('Position', [50 50 1200 600])
+%% number of eligible bonds
+
+f = figure('Position', genInfo.pos);
 plot(nEligibleBonds.Date, nEligibleBonds.GroupCount, '.')
 grid on
 grid minor
@@ -106,13 +147,17 @@ datetick 'x'
 xlabel('time')
 ylabel('Number of eligible bonds')
 
+% write to disk
+exportFig(f, ['numberEligibleBonds' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
+
+
 %% plot eligible bond prices and coupon payments
 
 % get only coupon payments
 xxInds = ~(btPrices.CouponPayment == 0);
 eligCoupons = btPrices(xxInds, :);
 
-figure('Position', [50 50 1200 600])
+f = figure('Position', genInfo.pos);
 
 % get some average yields
 paramsTableBt = paramsTable(paramsTable.Date >= initDate, :);
@@ -155,6 +200,9 @@ xlabel('date')
 ylabel('price')
 title('Eligible bond prices')
 
+% write to disk
+exportFig(f, ['eligibleBondPricesAndCoupons' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
+
 % %% In 3D - rather useless
 % 
 % yVals = repmat(1:size(widePrices(:, 2:end), 2), size(widePrices, 1), 1);
@@ -176,7 +224,7 @@ btHistory = outerjoin(btHistory, btPrices(:, {'TreasuryID', 'Date', 'Maturity'})
     'Keys', {'TreasuryID', 'Date'}, 'MergeKeys', true, 'Type', 'left');
 btHistory.TTM = btHistory.Maturity - btHistory.Date;
 
-figure('Position', [50 50 1200 600])
+f = figure('Position', genInfo.pos);
 plot(btHistory.Date, btHistory.TTM / 365, '.')
 hold on
 xlim = get(gca, 'XLim');
@@ -190,12 +238,15 @@ grid minor
 ylabel('Time to maturity in years')
 title('TTMs of portfolio vs desired TTMs')
 
+% write to disk
+exportFig(f, ['ttmOfBonds' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
+
 %% get bond portfolio performance
 
-pfValues = pfPerformance(btHistory, cashAccount);
+pfValues = bondPfPerformance(btHistory, cashAccount);
 
 % plot portfolio performance
-figure('Position', [50 50 1200 600])
+f = figure('Position', genInfo.pos);
 plot(pfValues.Date, pfValues.FullValue)
 hold on
 plot(pfValues.Date, pfValues.Cash)
@@ -207,12 +258,15 @@ grid minor
 legend('Portfolio value', 'Cash value', 'Cumulated distributions', ...
     'Location', 'NorthWest')
 
+% write to disk
+exportFig(f, ['bondPortfolioPerformance' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
+
 %% portfolio returns
 
 % get logarithmic returns
 logRets = diff(log(pfValues.FullValue));
 
-figure('Position', [50 50 1200 600])
+f = figure('Position', genInfo.pos);
 plot(pfValues.Date(2:end), logRets*100)
 datetick 'x'
 grid on
@@ -220,11 +274,15 @@ grid minor
 xlabel('date')
 title('logarithmic returns (%)')
 
+% write to disk
+exportFig(f, ['bondPortfolioReturns' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
+
+
 %% plot portfolio returns vs changes of average yields
 
 yieldRets = diff(log(benchYield.Yield));
 
-figure('Position', [50 50 1200 600])
+f = figure('Position', genInfo.pos);
 subplot(1, 2, 1)
 plot(yieldRets * 100, (-1)*logRets*100, '.')
 grid on
@@ -241,6 +299,10 @@ axis square
 xlabel('Yield changes')
 ylabel('Portfolio returns')
 
+% write to disk
+exportFig(f, ['bondPfReturnsVsYieldChanges' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
+
+
 %% plot change ratio over time
 
 ratios = (-1)*logRets ./ yieldRets;
@@ -249,7 +311,7 @@ xxInds = abs(yieldRets)*100 > 0.15 & abs(logRets)*100 > 0.15;
 xxShort = movingAvg(ratios, 300, true);
 xxShort2 = movingAvg(ratios(xxInds), 300, true);
 
-figure('Position', [50 50 1200 600])
+f = figure('Position', genInfo.pos);
 subplot(3, 1, 1)
 plot(dats(xxInds), ratios(xxInds))
 datetick 'x'
@@ -271,11 +333,16 @@ grid on
 grid minor
 title('Portfolio return / yield change ratio: robust movAvg')
 
+% write to disk
+exportFig(f, ['bondPfReturnsVsYieldChangeRatio' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
+
+
 %% find observations deviating from diagonal
 
 dats = benchYield.Date(2:end);
 xxInds = U(:, 1) + U(:, 2) < 0.7;
-figure('Position', [50 50 1200 600])
+
+f = figure('Position', genInfo.pos);
 stem(dats(~xxInds), logRets(~xxInds), '.r')
 hold on
 stem(dats(xxInds), logRets(xxInds), '.')
@@ -285,9 +352,14 @@ axis tight
 grid on
 grid minor
 
+
+% write to disk
+exportFig(f, ['bondPfReturnsVsYieldChangeOutliers' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
+
+
 %% squared log returns
 
-figure('Position', [50 50 1200 600])
+f = figure('Position', genInfo.pos);
 plot(pfValues.Date(2:end), (logRets*100).^2)
 datetick 'x'
 grid on
@@ -295,10 +367,13 @@ grid minor
 xlabel('date')
 title('logarithmic returns (%)')
 
+% write to disk
+exportFig(f, ['bondPfSquaredRets' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
+
 %% moving average of returns
 
 xxShort = movingAvg(logRets, 300, true);
-figure('Position', [50 50 1200 600])
+f = figure('Position', genInfo.pos);
 plot(pfValues.Date(2:end), xxShort)
 hold on
 plot(paramsTableBt.Date, (-1)*avgYield / 100 / 365)
@@ -308,10 +383,13 @@ grid on
 grid minor
 title('Moving average, 300 days')
 
+% write to disk
+exportFig(f, ['bondPfMeanReturns' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
+
 
 %% plot distributions
 
-figure('Position', [50 50 1200 600])
+f = figure('Position', genInfo.pos);
 subplot(2, 1, 1)
 plot(btHistory.Date, btHistory.CouponPayment, '.')
 datetick 'x'
@@ -326,6 +404,10 @@ grid on
 grid minor
 title('Distributions per bond position')
 
+
+% write to disk
+exportFig(f, ['bondDistributions' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
+
 %% portfolio weights
 
 lastDate = max(btHistory.Date);
@@ -335,13 +417,17 @@ lastDatePf = selRowsProp(btHistory, 'Date', lastDate);
 lastDatePf.EveningVolumes = lastDatePf.MorningVolumes + lastDatePf.Orders;
 lastDatePf.MarketValue = lastDatePf.EveningVolumes .* lastDatePf.Price;
 
-figure('Position', [50 50 1200 600])
+f = figure('Position', genInfo.pos);
 plot(sort(lastDatePf.MarketValue), '.')
 grid on
 grid minor
 title('Market value of individual bond positions')
 xlabel('Bond')
 ylabel('Market value')
+
+
+% write to disk
+exportFig(f, ['bondPfWeights' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
 
 %% Buying vs selling price
 
@@ -407,7 +493,7 @@ fullBondCashFlows = outerjoin(bondComponentProperties, ...
 fullBondCashFlows.Overall = fullBondCashFlows.sum_CouponPayment + fullBondCashFlows.PriceGain;
 
 %%
-figure('Position', [50 50 1200 600])
+f = figure('Position', genInfo.pos);
 subplot(2, 1, 1)
 plot(btWide.Date, btWide{:, 2:end})
 title('Portfolio component prices')
@@ -433,9 +519,13 @@ datetick 'x'
 grid on
 grid minor
 
+
+% write to disk
+exportFig(f, ['bondPrices' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
+
 %% individual bond cash-flows
 
-figure('Position', [50 50 1200 600])
+f = figure('Position', genInfo.pos);
 subplot(1, 2, 1)
 plot(fullBondCashFlows.sum_CouponPayment, fullBondCashFlows.PriceGain, '.')
 grid on
@@ -457,13 +547,18 @@ xlabel('Selling date')
 ylabel('Overall cash-flows')
 title('Overall gain per bond')
 
+
+% write to disk
+exportFig(f, ['bondCashflows' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
+
+
 %% plot individual bond cash-flows
 % one could also compare
 % - auction date yields to coupons gained
 % - price gain vs difference between yield at initial date and yield at
 % selling date
 
-figure('Position', [50 50 1200 600])
+f = figure('Position', genInfo.pos);
 
 subplot(2, 1, 1)
 plot(paramsTableBt.Date, avgYield, '-r')
@@ -484,7 +579,11 @@ grid minor
 xlabel('Selling date')
 title('Price gain vs (-4) times yield difference')
 
-figure('Position', [50 50 1200 600])
+
+% write to disk
+exportFig(f, ['individualBondCashflows' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
+
+f = figure('Position', genInfo.pos);
 subplot(2, 1, 1)
 plot(fullBondCashFlows.SellDate, fullBondCashFlows.sum_CouponPayment, '.')
 hold on
@@ -504,10 +603,12 @@ grid minor
 xlabel('Selling date')
 title('Overall gain per bond')
 
+% write to disk
+exportFig(f, ['individualBondCashflows2' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
 
 %% individual realized bond returns
 
-figure('Position', [50 50 1200 600])
+f = figure('Position', genInfo.pos);
 subplot(1, 2, 1)
 plot(fullBondCashFlows.SellDate, fullBondCashFlows.DiscRet, '.')
 datetick 'x'
@@ -524,12 +625,18 @@ xlabel('Time that bond was held (years)')
 title('Bond returns vs holding duration')
 
 
+% write to disk
+exportFig(f, ['bondReturns' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
+
+
 %% histogram of individual bond returns
 
-figure('Position', [50 50 1200 600])
+f = figure('Position', genInfo.pos);
 hist(fullBondCashFlows.DiscRet, 30)
 title('Bond price returns (dirty price)')
 grid on
 grid minor
 
+% write to disk
+exportFig(f, ['bondReturnsHistogram' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
 
