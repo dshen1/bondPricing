@@ -1,4 +1,4 @@
-function pfValues = pfPerformance(pfHistory, cashAccount)
+function pfValues = bondPfPerformance(pfHistory, cashAccount)
 % get performance from portfolio history
 
 % get market values of individual positions
