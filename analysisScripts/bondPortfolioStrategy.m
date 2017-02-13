@@ -14,7 +14,7 @@
 
 % set data directory
 dataDir = '../priv_bondPriceData';
-fname = fullfile(dataDir, 'syntheticBondsLongFormat.mat');
+fname = fullfile(dataDir, 'syntheticRealBondsLongFormat.mat');
 load(fname)
 
 %% define strategy parameters

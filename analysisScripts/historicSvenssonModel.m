@@ -23,7 +23,7 @@ thisParams = paramsTable{xxInd, 2:end};
 thisDate = paramsTable.Date(xxInd);
 
 % get yields / foward rates
-[yields, fowRates] = svenssonYields(thisParams, maturs');
+[yields, fowRates] = svenssonYields(thisParams, maturs);
 
 %% plot rates
 
@@ -36,7 +36,7 @@ legend('forward rates', 'yields', 'Location', 'Southoutside')
 %% get all historic yields
 
 % get yields / foward rates
-[yields, fowRates] = svenssonYields(paramsTable{:, 2:end}, maturs');
+[yields, fowRates] = svenssonYields(paramsTable{:, 2:end}, maturs);
 
 %% plot yields over time
 
