@@ -5,8 +5,9 @@
 
 genInfo.pos = [50 50 1200 500];
 genInfo.GS = GlobalSettings();
-genInfo.fmt = 'pdf'; % define default figure format
-genInfo.figClose = true;
+genInfo.fmt = 'png'; % define default figure format
+genInfo.figClose = false;
+genInfo.picsDir = '../../dissDataAndPics/bondPricing/';
 
 % pick two different dates for which to show yield curves
 genInfo.date1 = makeBusDate(datenum('1987-04-03'), 'follow', ...
@@ -60,7 +61,7 @@ title('Forward rates')
 legend(datestr(genInfo.date1), datestr(genInfo.date2), 'Location', 'Southeast')
 
 % write to disk
-exportFig(f, 'yieldsAndFowRates', '.', genInfo.fmt, genInfo.figClose)
+exportFig(f, 'yieldsAndFowRates', genInfo.picsDir, genInfo.fmt, genInfo.figClose)
 
 %% Plot associated discount functions
 
@@ -82,7 +83,7 @@ title('Discount function')
 legend(datestr(genInfo.date1), datestr(genInfo.date2), 'Location', 'Southwest')
 
 % write to disk
-exportFig(f, 'discountFunction', '.', genInfo.fmt, genInfo.figClose)
+exportFig(f, 'discountFunction', genInfo.picsDir, genInfo.fmt, genInfo.figClose)
 
 %% show relation of zero coupon bond prices and discount function
 
@@ -151,7 +152,7 @@ grid minor
 xlabel('Year')
 ylabel('Bond price')
 
-exportFig(f, 'zeroCouponConstYield', '.', genInfo.fmt, genInfo.figClose, true)
+exportFig(f, 'zeroCouponConstYield', genInfo.picsDir, genInfo.fmt, genInfo.figClose, true)
 
 
 %% bond price evolution figures
@@ -203,7 +204,7 @@ ylabel('Bond price')
 legend('Zero coupon bond', ['Coupon bond (' num2str(couponBond.CouponRate*2*100) '%)'], ...
     'Location', 'Southeast')
 
-exportFig(f, 'bondPricesConstYield', '.', genInfo.fmt, genInfo.figClose, false)
+exportFig(f, 'bondPricesConstYield', genInfo.picsDir, genInfo.fmt, genInfo.figClose, false)
 
 %%
 
@@ -254,4 +255,4 @@ ylabel('Bond price')
 legend('Zero coupon bond', ['Coupon bond (' num2str(couponBond.CouponRate*2*100) '%)'], ...
     'Location', 'Southeast')
 
-exportFig(f, 'bondPricesHistoricYields', '.', genInfo.fmt, genInfo.figClose, false)
+exportFig(f, 'bondPricesHistoricYields', genInfo.picsDir, genInfo.fmt, genInfo.figClose, false)
