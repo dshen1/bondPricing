@@ -148,7 +148,7 @@ nObs = size(cashAccount, 1);
 for ii=2:nObs
     if mod(ii, 1000) == 0
         fracProgress = ii/nObs;
-        fprintf('\nProgress of backtest: %1.3f  %%', fracProgress)
+        fprintf('\nProgress of backtest: %1.3f  %%', fracProgress*100)
     end
     
     % get current date
@@ -254,7 +254,12 @@ for ii=2:nObs
     [forecastBondValues, pfMacDurs, ~] = evalFixedBondPf(yields, currAssetsMarket, cashAccount(ii, :), thisComponents);
     macDurs.MacDur(ii) = pfMacDurs.MacDur(1);
     pfTimeTrend.CurrentValue(ii) = forecastBondValues.PfValForecast(1);
-    pfTimeTrend.TimeTrend(ii) = forecastBondValues.PfValForecast(2);
+    
+    % get slope of daily portfolio value trend
+    deltaVal = forecastBondValues.PfValForecast(2) - forecastBondValues.PfValForecast(1);
+    deltaTime = forecastBondValues.Date(2) - forecastBondValues.Date(1);
+    relativeDeltaVal = deltaVal ./ forecastBondValues.PfValForecast(1);
+    pfTimeTrend.TimeTrend(ii) = relativeDeltaVal ./ deltaTime;
 
     % attach orders to portfolio history
     pfHistory = [pfHistory; currAssetsMarket];
