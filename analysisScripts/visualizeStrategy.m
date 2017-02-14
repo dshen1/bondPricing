@@ -1,4 +1,4 @@
-function visualizeStrategy(paramsTable, allTreasuries, longPrices, pfHistory, cashAccount, pfTimeTrend, macDurs, strategyParams, stratName)
+function visualizeStrategy(paramsTable, pfHistory, cashAccount, pfTimeTrend, macDurs, strategyParams, stratName)
 % visual inspection of backtested bond portfolio strategy
 %
 % Inputs:
@@ -215,7 +215,7 @@ datetick 'x'
 title('Yield change, rel')
 
 % write to disk
-exportFig(f, ['bondPfReturnsVsYieldChanges' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
+exportFig(f, ['bondPfReturnsVsYieldChangesOverTime' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
 
 %% plot portfolio returns vs changes of average yields
 
@@ -415,6 +415,7 @@ fullBondCashFlows = outerjoin(bondComponentProperties, ...
     aggrBondDistributions(:, {'TreasuryID', 'sum_CouponPayment'}), 'Keys', 'TreasuryID',...
     'MergeKeys', true, 'Type', 'left');
 fullBondCashFlows.Overall = fullBondCashFlows.sum_CouponPayment + fullBondCashFlows.PriceGain;
+fullBondCashFlows.TR = fullBondCashFlows.Overall ./ fullBondCashFlows.BuyPrice;
 
 %%
 f = figure('Position', genInfo.pos);
@@ -445,7 +446,7 @@ grid minor
 
 
 % write to disk
-exportFig(f, ['bondPrices' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
+exportFig(f, ['bondPriceGains' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
 
 %% individual bond cash-flows
 
@@ -534,33 +535,33 @@ exportFig(f, ['individualBondCashflows2' genInfo.suffix], genInfo.picsDir, genIn
 
 f = figure('Position', genInfo.pos);
 subplot(1, 2, 1)
-plot(fullBondCashFlows.SellDate, fullBondCashFlows.DiscRet, '.')
+plot(fullBondCashFlows.SellDate, 100*fullBondCashFlows.TR, '.')
 datetick 'x'
 grid on
 grid minor
 xlabel('Selling date')
-title('Bond returns vs selling date')
+title('Bond returns (perc.) vs selling date')
 
 subplot(1, 2, 2)
-plot(fullBondCashFlows.HoldingDur / 365, fullBondCashFlows.DiscRet, '.')
+plot(fullBondCashFlows.HoldingDur / 365, 100*fullBondCashFlows.TR, '.')
 grid on
 grid minor
 xlabel('Time that bond was held (years)')
-title('Bond returns vs holding duration')
+title('Bond returns (perc.) vs holding duration')
 
 
 % write to disk
-exportFig(f, ['bondReturns' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
+exportFig(f, ['individualBondTotalReturns' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
 
 
 %% histogram of individual bond returns
 
 f = figure('Position', genInfo.pos);
-hist(fullBondCashFlows.DiscRet, 30)
-title('Bond price returns (dirty price)')
+hist(100*fullBondCashFlows.TR, 30)
+title('Bond total returns (perc.)')
 grid on
 grid minor
 
 % write to disk
-exportFig(f, ['bondReturnsHistogram' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
+exportFig(f, ['individualBondTotalReturnsHistogram' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
 

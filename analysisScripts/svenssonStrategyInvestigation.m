@@ -18,8 +18,9 @@ fname = fullfile(dataDir, 'paramsData_FED.csv');
 paramsTable = readtable(fname);
 paramsTable = paramsTable(~any(isnan(paramsTable{:, 2:end}), 2), :);
 
-% flip upside down
-%paramsTable{:, 2:end} = flipud(paramsTable{:, 2:end});
+%% yield curve reversal
+
+paramsTable{:, 2:end} = flipud(paramsTable{:, 2:end});
 
 %% define strategy
 
@@ -47,11 +48,11 @@ end
 
 %% visualize bond market
 
-visualizeBondMarket(paramsTable, allTreasuries, longPrices, strategyParams, 'realYields')
+visualizeBondMarket(paramsTable, allTreasuries, longPrices, strategyParams, 'yieldReversal_rolling_7to10')
 
 %% visualize bond portfolio
 
-visualizeStrategy(paramsTable, allTreasuries, longPrices, pfHistory, cashAccount, pfTimeTrend, macDurs, strategyParams, 'realYields_rolling_7to10')
+visualizeStrategy(paramsTable, pfHistory, cashAccount, pfTimeTrend, macDurs, strategyParams, 'yieldReversal_rolling_7to10')
 
 %%
 close all
