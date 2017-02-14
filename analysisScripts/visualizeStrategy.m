@@ -34,6 +34,7 @@ for ii=100:length(logRets)
     pfVolaHat(ii) = sampleStd(100*logRets(1:ii), 0.95);
 end
 
+bskt.Date = pfTimeTrend.Date;
 bskt.logRets = logRets;
 bskt.pfVolaHat = pfVolaHat;
 
@@ -61,7 +62,7 @@ exportFig(f, ['bondPfPerformance' genInfo.suffix], genInfo.picsDir, genInfo.fmt,
 
 f = figure('pos', genInfo.pos);
 subplot(2, 1, 1)
-plot(pfTimeTrend.Date, pfTimeTrend.TimeTrend*100); 
+plot(bskt.Date, pfTimeTrend.TimeTrend*100); 
 datetick 'x'; 
 grid minor
 title('Deterministic portfolio trend')
@@ -80,13 +81,13 @@ exportFig(f, ['bondPfCharacteristics' genInfo.suffix], genInfo.picsDir, genInfo.
 f = figure('pos', genInfo.pos);
 
 subplot(2, 1, 1)
-plot(pfTimeTrend.Date(2:end), 100*logRets)
+plot(bskt.Date(2:end), 100*logRets)
 grid minor
 datetick 'x'
 title('Logarithmic portfolio returns, %')
 
 subplot(2, 1, 2)
-plot(pfTimeTrend.Date(2:end), pfVolaHat)
+plot(bskt.Date(2:end), pfVolaHat)
 grid minor
 datetick 'x'
 title('Estimated portfolio return volatility')
@@ -104,13 +105,12 @@ exportFig(f, ['bondPfReturnsAndVola' genInfo.suffix], genInfo.picsDir, genInfo.f
 % extract dates and parameters for given time period
 xxInds = paramsTable.Date >= strategyParams.initDate;
 thisParams = paramsTable{xxInds, 2:end};
-thisDate = paramsTable.Date(xxInds);
 
 % maturities are given in years
 maturs = [0.1 1:30];
 
 % get yields / foward rates
-[yields, fowRates] = svenssonYields(thisParams, maturs);
+[yields, ~] = svenssonYields(thisParams, maturs);
 
 % get proxy for yield changes
 xxProxyInd = 6;
@@ -147,10 +147,10 @@ exportFig(f, ['parallelShiftYieldProxy' genInfo.suffix], genInfo.picsDir, genInf
 f = figure('pos', genInfo.pos);
 
 % plot true yields
-p1 = plot(macDurs.Date(2:end), yields(2:end, 3:end), '-b');
+p1 = plot(bskt.Date(2:end), yields(2:end, 3:end), '-b');
 hold on
-p2 = plot(macDurs.Date(2:end), yieldProxy(2:end), '-g');
-p3 = plot(macDurs.Date(2:end), inferredYields, '-r');
+p2 = plot(bskt.Date(2:end), yieldProxy(2:end), '-g');
+p3 = plot(bskt.Date(2:end), inferredYields, '-r');
 hold off
 grid minor
 datetick 'x'
@@ -176,13 +176,13 @@ bskt.yieldChangeVolaHat = yieldChangeVolaHat;
 f = figure('pos', genInfo.pos);
 
 subplot(2, 1, 1)
-plot(pfTimeTrend.Date(2:end), pfVolaHat)
+plot(bskt.Date(2:end), pfVolaHat)
 grid minor
 datetick 'x'
 title('Portfolio return volatility')
 
 subplot(2, 1, 2)
-plot(pfTimeTrend.Date(2:end), yieldChangeVolaHat)
+plot(bskt.Date(2:end), yieldChangeVolaHat)
 grid minor
 datetick 'x'
 title('Yield change (abs.) volatility')
@@ -195,21 +195,21 @@ exportFig(f, ['bondPfVolaVsYieldChangeVola' genInfo.suffix], genInfo.picsDir, ge
 
 f = figure('pos', genInfo.pos);
 subplot(3, 1, 1)
-plot(pfTimeTrend.Date(2:end), 100*bskt.logRets)
+plot(bskt.Date(2:end), 100*bskt.logRets)
 grid minor
 datetick 'x'
 title('Log returns')
 
 subplot(3, 1, 2)
 absYieldChanges = diff(bskt.yieldProxy);
-plot(thisDate(2:end), absYieldChanges)
+plot(bskt.Date(2:end), absYieldChanges)
 grid minor
 datetick 'x'
 title('Yield change, abs')
 
 subplot(3, 1, 3)
 relYieldChanges = 100*diff(log(bskt.yieldProxy));
-plot(thisDate(2:end), relYieldChanges)
+plot(bskt.Date(2:end), relYieldChanges)
 grid minor
 datetick 'x'
 title('Yield change, rel')
@@ -226,6 +226,7 @@ grid on
 grid minor
 xlabel('Absolute difference of yields')
 ylabel('Log portfolio return')
+axis square
 
 U = ranks([absYieldChanges logRets]);
 subplot(1, 2, 2)
@@ -243,11 +244,12 @@ exportFig(f, ['bondPfReturnsVsYieldChanges' genInfo.suffix], genInfo.picsDir, ge
 
 f = figure('Position', genInfo.pos);
 subplot(1, 2, 1)
-plot(relYieldChanges*100, (-1)*logRets*100, '.')
+plot(relYieldChanges, (-1)*logRets*100, '.')
 grid on
 grid minor
 xlabel('Difference of log yields')
 ylabel('Log portfolio return')
+axis square
 
 U = ranks([relYieldChanges logRets]);
 subplot(1, 2, 2)
@@ -263,30 +265,21 @@ exportFig(f, ['bondPfReturnsVsRelYieldChanges' genInfo.suffix], genInfo.picsDir,
 
 %% plot change ratio over time
 
-yieldRets = absYieldChanges;
+yieldRets = relYieldChanges;
 ratios = (-1)*logRets ./ yieldRets;
-dats = thisDate(2:end);
-xxInds = abs(yieldRets)*100 > 0.15 & abs(logRets)*100 > 0.15;
-xxShort = movingAvg(ratios, 300, true);
-xxShort2 = movingAvg(ratios(xxInds), 300, true);
+xxInds = abs(yieldRets) > 0.25 & abs(logRets)*100 > 0.25;
+xxShort = movingAvg(ratios(xxInds), 300, true);
 
 f = figure('Position', genInfo.pos);
-subplot(3, 1, 1)
-plot(dats(xxInds), ratios(xxInds))
+subplot(2, 1, 1)
+plot(bskt.Date(xxInds), ratios(xxInds))
 datetick 'x'
 grid on
 grid minor
 title('Portfolio return / yield change ratio: outlier free')
 
-subplot(3, 1, 2)
-plot(dats, xxShort)
-datetick 'x'
-grid on
-grid minor
-title('Portfolio return / yield change ratio: movAvg - unstable close to zero returns')
-
-subplot(3, 1, 3)
-plot(dats(xxInds), xxShort2)
+subplot(2, 1, 2)
+plot(bskt.Date(xxInds), xxShort)
 datetick 'x'
 grid on
 grid minor
@@ -299,14 +292,15 @@ exportFig(f, ['bondPfReturnsVsYieldChangeRatio' genInfo.suffix], genInfo.picsDir
 
 xxShort = movingAvg(logRets, 300, true);
 f = figure('Position', genInfo.pos);
-plot(pfValues.Date(2:end), xxShort)
+p1 = plot(bskt.Date(2:end), xxShort);
 hold on
-plot(paramsTableBt.Date, (-1)*avgYield / 100 / 365)
+p2 = plot(bskt.Date, (-1)*bskt.yieldProxy / 100 / 365);
 hold off
 datetick 'x'
 grid on
 grid minor
 title('Moving average, 300 days')
+legend([p1, p2], 'Moving average portfolio returns', 'Re-scaled yield proxy')
 
 % write to disk
 exportFig(f, ['bondPfMeanReturns' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
@@ -316,14 +310,18 @@ exportFig(f, ['bondPfMeanReturns' genInfo.suffix], genInfo.picsDir, genInfo.fmt,
 
 f = figure('Position', genInfo.pos);
 subplot(2, 1, 1)
-plot(btHistory.Date, btHistory.CouponPayment, '.')
+yVals = pfHistory.CouponPayment;
+yVals(yVals == 0) = NaN;
+plot(pfHistory.Date, yVals, '.')
 datetick 'x'
 grid on
 grid minor
 title('Distributions per single volume')
 
 subplot(2, 1, 2)
-plot(btHistory.Date, btHistory.CouponPayment .* btHistory.MorningVolumes, '.r')
+yVals = pfHistory.CouponPayment .* pfHistory.MorningVolumes;
+yVals(yVals == 0) = NaN;
+plot(pfHistory.Date, yVals, '.r')
 datetick 'x'
 grid on
 grid minor
@@ -335,8 +333,8 @@ exportFig(f, ['bondDistributions' genInfo.suffix], genInfo.picsDir, genInfo.fmt,
 
 %% portfolio weights
 
-lastDate = max(btHistory.Date);
-lastDatePf = selRowsProp(btHistory, 'Date', lastDate);
+lastDate = max(pfHistory.Date);
+lastDatePf = selRowsProp(pfHistory, 'Date', lastDate);
 
 % get market value of each position
 lastDatePf.EveningVolumes = lastDatePf.MorningVolumes + lastDatePf.Orders;
@@ -356,7 +354,7 @@ exportFig(f, ['bondPfWeights' genInfo.suffix], genInfo.picsDir, genInfo.fmt, gen
 
 %% Buying vs selling price
 
-btWide = unstack(btHistory(:, {'Date', 'TreasuryID', 'Price'}), 'Price', 'TreasuryID');
+btWide = unstack(pfHistory(:, {'Date', 'TreasuryID', 'Price'}), 'Price', 'TreasuryID');
 
 %% get return and gain per bond
 
@@ -395,6 +393,7 @@ priceGains.PriceGain = priceGains.SellPrice - priceGains.BuyPrice;
 priceGains.DiscRet = priceGains.PriceGain ./ priceGains.BuyPrice;
 
 % join prevailing yields / yield differences
+benchYield = array2table([bskt.Date, bskt.yieldProxy], 'VariableNames', {'Date', 'Yield'});
 bondComponentProperties = outerjoin(priceGains, benchYield, 'LeftKeys', {'BuyDate'}, 'RightKeys', {'Date'},...
     'Type', 'left', 'MergeKeys', true);
 bondComponentProperties.Properties.VariableNames{'Yield'} = 'InitYield';
@@ -409,7 +408,7 @@ bondComponentProperties.Properties.VariableNames{'BuyDate_Date'} = 'BuyDate';
 bondComponentProperties.Properties.VariableNames{'SellDate_Date'} = 'SellDate';
 
 %%
-aggrBondDistributions = grpstats(btPrices(:, {'TreasuryID', 'CouponPayment'}), ...
+aggrBondDistributions = grpstats(pfHistory(:, {'TreasuryID', 'CouponPayment'}), ...
     'TreasuryID', 'sum');
 
 fullBondCashFlows = outerjoin(bondComponentProperties, ...
@@ -486,7 +485,7 @@ exportFig(f, ['bondCashflows' genInfo.suffix], genInfo.picsDir, genInfo.fmt, gen
 f = figure('Position', genInfo.pos);
 
 subplot(2, 1, 1)
-plot(paramsTableBt.Date, avgYield, '-r')
+plot(benchYield.Date, benchYield.Yield, '-r')
 datetick 'x'
 grid on
 grid minor
