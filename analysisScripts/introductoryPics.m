@@ -7,7 +7,7 @@ genInfo.pos = [50 50 1200 500];
 genInfo.GS = GlobalSettings();
 genInfo.fmt = 'png'; % define default figure format
 genInfo.figClose = false;
-genInfo.picsDir = '../../dissDataAndPics/bondPricing/';
+genInfo.picsDir = '../../dissDataAndPics/bondPricing/devPics';
 
 % pick two different dates for which to show yield curves
 genInfo.date1 = makeBusDate(datenum('1987-04-03'), 'follow', ...
