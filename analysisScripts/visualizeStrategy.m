@@ -76,6 +76,28 @@ title('Portfolio sensitivity')
 % write to disk
 exportFig(f, ['bondPfCharacteristics' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
 
+%% predictory power of deterministic trend
+
+nNextYears = 8;
+
+% get associated returns
+nNextDays = nNextYears * 250;
+pfVals = pfValues.FullValue;
+futureRets = pfVals((nNextDays+1):end)./pfVals(1:(end-nNextDays));
+futureRets = futureRets.^(1/nNextYears) - 1;
+
+f = figure('pos', genInfo.pos);
+scatter(pfTimeTrend.TimeTrend(1:length(futureRets)), futureRets, ...
+    8, 1:length(futureRets))
+xlabel('Time trend')
+ylabel('Annualized portfolio return')
+title([num2str(nNextYears) ' years predictory power'])
+grid minor
+colorbar()
+
+% write to disk
+exportFig(f, ['bondPfPredictoryPower' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
+
 %% show portfolio returns and estimated volatility
 
 f = figure('pos', genInfo.pos);
