@@ -56,11 +56,11 @@ end
 
 %% visualize bond market
 
-visualizeBondMarket(paramsTable, allTreasuries, longPrices, strategyParams, 'realYields_rolling_7to10')
+visualizeBondMarket(paramsTable, allTreasuries, longPrices, strategyParams, 'realYields_extendReflection_rolling_7to10')
 
 %% visualize bond portfolio
 
-visualizeStrategy(paramsTable, pfHistory, cashAccount, pfTimeTrend, macDurs, strategyParams, 'realYields_rolling_7to10')
+visualizeStrategy(paramsTable, pfHistory, cashAccount, pfTimeTrend, macDurs, strategyParams, 'realYields_extendReflection_rolling_7to10')
 
 %%
 close all
