@@ -20,7 +20,15 @@ paramsTable = paramsTable(~any(isnan(paramsTable{:, 2:end}), 2), :);
 
 %% yield curve reversal
 
-paramsTable{:, 2:end} = flipud(paramsTable{:, 2:end});
+%paramsTable{:, 2:end} = flipud(paramsTable{:, 2:end});
+
+%% yield curve: extension by reflection
+
+paramsTable2 = paramsTable;
+paramsTable2{:, 2:end} = flipud(paramsTable{:, 2:end});
+paramsTable2.Date = (1:size(paramsTable2, 1))' + paramsTable.Date(end) + 1;
+paramsTable = [paramsTable; paramsTable2];
+paramsTable = paramsTable(1:20000, :);
 
 %% define strategy
 
@@ -48,11 +56,11 @@ end
 
 %% visualize bond market
 
-visualizeBondMarket(paramsTable, allTreasuries, longPrices, strategyParams, 'yieldReversal_rolling_7to10')
+visualizeBondMarket(paramsTable, allTreasuries, longPrices, strategyParams, 'realYields_rolling_7to10')
 
 %% visualize bond portfolio
 
-visualizeStrategy(paramsTable, pfHistory, cashAccount, pfTimeTrend, macDurs, strategyParams, 'yieldReversal_rolling_7to10')
+visualizeStrategy(paramsTable, pfHistory, cashAccount, pfTimeTrend, macDurs, strategyParams, 'realYields_rolling_7to10')
 
 %%
 close all
