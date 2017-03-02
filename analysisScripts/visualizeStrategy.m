@@ -58,6 +58,45 @@ legend('Portfolio value', 'Cash value', 'Cumulated distributions', ...
 % write to disk
 exportFig(f, ['bondPfPerformance' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
 
+%% log portfolio performance
+
+plot(pfTimeTrend.Date, log(pfTimeTrend.CurrentValue))
+datetick 'x'
+grid minor
+set(gca, 'XTickLabelRot', 45)
+
+%% 1 year return
+
+
+xxInds = paramsTable.Date >= strategyParams.initDate;
+thisParams = paramsTable{xxInds, 2:end};
+thisDates = paramsTable.Date(xxInds);
+
+% maturities are given in years
+maturs = 8;
+
+% get yields / foward rates
+[yields, ~] = svenssonYields(thisParams, maturs);
+
+%%
+
+allHorizons = [250, 500, 1000, 2500];
+
+for ii=1:length(allHorizons)
+    subplot(2, 2, ii)
+    nDaysAhead = allHorizons(ii);
+    nYearsAhead = nDaysAhead / 250;
+    xx = movingAvg(bskt.logRets, nDaysAhead, true)*250*100;
+    plot(pfTimeTrend.Date(2:(end-nDaysAhead)), xx(nDaysAhead+1:end))
+    hold on
+    plot(thisDates, yields)
+    title([num2str(nYearsAhead) ' years ahead'])
+    datetick 'x'
+    axis tight
+    grid minor
+    xlabel('First window date')
+end
+
 %% show portfolio characteristics: trend and sensitivity
 
 f = figure('pos', genInfo.pos);
