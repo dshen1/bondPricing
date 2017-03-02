@@ -8,7 +8,7 @@ function discFacts = yieldToDiscount(maturs, yields)
 % Outputs:
 %   discFacts   nx1 vector of discount rates
 
-if any(yields > 1)
+if any(yields > 1.8)
     error('bondPricing:yieldToDiscount', ['Some yield larger than 1.\n'...
         'Yields have to be given as fractional values, '...
         'and not in percent'])

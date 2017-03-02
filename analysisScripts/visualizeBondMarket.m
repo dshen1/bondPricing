@@ -17,7 +17,7 @@ end
 
 genInfo.pos = [50 50 1200 600];
 genInfo.fmt = 'png';
-genInfo.picsDir = '../../dissDataAndPics/bondPricing/';
+genInfo.picsDir = '../../dissDataAndPics/bondPricing/pics/devPics';
 
 if doExportPics
     genInfo.marketName = marketName;
@@ -26,12 +26,9 @@ end
 genInfo.figClose = true;
 
 % make some variables more easily accessible
-initWealth = strategyParams.initWealth;
-transCosts = strategyParams.transCosts;
 initDate = strategyParams.initDate;
 minDur = strategyParams.minDur;
 maxDur = strategyParams.maxDur;
-maturGrid = strategyParams.maturGrid;
 
 %%
 
@@ -47,7 +44,7 @@ allMaturs = [0.5:0.1:10];
 
 % get yields / foward rates
 paramsTableBt = paramsTable(paramsTable.Date >= initDate, :);
-[fullYields, fowRates] = svenssonYields(paramsTableBt{:, 2:end}, allMaturs);
+[fullYields, fullFowRates] = svenssonYields(paramsTableBt{:, 2:end}, allMaturs);
 
 % get full grid matrices
 fullMaturGrid = repmat(allMaturs, size(paramsTableBt, 1), 1);
@@ -66,6 +63,37 @@ dateInds = 1:freq:length(paramsTableBt.Date);
 timeGrid = fullTimeGrid(dateInds, matursInds);
 maturSurfaceGrid = fullMaturGrid(dateInds, matursInds);
 yields = fullYields(dateInds, matursInds);
+
+%% visualize forward rate curve surface
+
+% define maturity granularity
+selectedMaturs = [0.5, 5, 10];
+[~, xxmatursInds] = ismember(selectedMaturs, allMaturs);
+xxmatursInds = xxmatursInds(xxmatursInds > 0);
+
+% plot yield curves over time
+f = figure('Position', genInfo.pos);
+
+subplot(5, 1, 1:3)
+plot(paramsTableBt.Date, fullYields(:, xxmatursInds))
+datetick 'x'
+set(gca, 'XTickLabelRot', 45)
+title('Interest rates')
+grid on
+grid minor
+legend(strcat(cellstr(num2str(selectedMaturs')), ' years'), 'Location', 'SouthOutside',...
+    'Orientation', 'Horizontal')
+
+subplot(5, 1, 4:5)
+plot(paramsTableBt.Date, fullFowRates(:, xxmatursInds))
+datetick 'x'
+set(gca, 'XTickLabelRot', 45)
+grid on
+grid minor
+title('Forward rates')
+
+% write to disk
+exportFig(f, ['selectedYieldsAndFwdRates' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
 
 %% visualize yield curve surface
 

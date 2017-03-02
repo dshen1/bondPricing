@@ -17,13 +17,13 @@ end
 
 genInfo.pos = [50 50 1200 600];
 genInfo.fmt = 'png';
-genInfo.picsDir = '../../dissDataAndPics/bondPricing/';
+genInfo.picsDir = '../../dissDataAndPics/bondPricing/pics/devPics';
 
 if doExportPics
     genInfo.stratName = stratName;
     genInfo.suffix = ['_' genInfo.stratName];
 end
-genInfo.figClose = true;
+genInfo.figClose = false;
 
 %% make some pre-calculations
 
