@@ -95,8 +95,8 @@ exportFig(f, 'zcBondReturnOverTime', genInfo.picsDir, genInfo.fmt, genInfo.figCl
 xxMaturGrid = [0.1:0.1:maturs(end)];
 deltaTime = 1;
 xxAreaGrid = 0:0.01:deltaTime;
-xxAreaGridRight = finalTau - deltaTime + xxAreaGrid;
 finalTau = 10;
+xxAreaGridRight = finalTau - deltaTime + xxAreaGrid;
 
 % get trajectory under expectation hypothesis
 [~, currentFwdRates] = svenssonYields(thisYieldCurve{1, 2:end}, xxMaturGrid);
@@ -115,6 +115,7 @@ legend([p1, h1, h2], 'Location', 'SouthEast')
 title('First year compounding')
 
 exportFig(f, 'zcBondFirstYearCompounding', genInfo.picsDir, genInfo.fmt, genInfo.figClose, true)
+
 
 %% visualizing buy-and-hold trajectories
 

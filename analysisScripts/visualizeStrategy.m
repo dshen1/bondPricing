@@ -60,13 +60,18 @@ exportFig(f, ['bondPfPerformance' genInfo.suffix], genInfo.picsDir, genInfo.fmt,
 
 %% log portfolio performance
 
+f = figure();
+
 plot(pfTimeTrend.Date, log(pfTimeTrend.CurrentValue))
 datetick 'x'
 grid minor
 set(gca, 'XTickLabelRot', 45)
+title('Log portfolio value')
 
-%% 1 year return
+% write to disk
+exportFig(f, ['bondPfPerformanceLog' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
 
+%% interest rates vs future portfolio return
 
 xxInds = paramsTable.Date >= strategyParams.initDate;
 thisParams = paramsTable{xxInds, 2:end};
@@ -78,10 +83,9 @@ maturs = 8;
 % get yields / foward rates
 [yields, ~] = svenssonYields(thisParams, maturs);
 
-%%
-
 allHorizons = [250, 500, 1000, 2500];
 
+f = figure('Position', genInfo.pos);
 for ii=1:length(allHorizons)
     subplot(2, 2, ii)
     nDaysAhead = allHorizons(ii);
@@ -95,7 +99,11 @@ for ii=1:length(allHorizons)
     axis tight
     grid minor
     xlabel('First window date')
+    ylabel([num2str(maturs) ' years yield'])
 end
+
+% write to disk
+exportFig(f, ['bondPfPredictoryPowerOfYield' genInfo.suffix], genInfo.picsDir, genInfo.fmt, genInfo.figClose)
 
 %% show portfolio characteristics: trend and sensitivity
 
