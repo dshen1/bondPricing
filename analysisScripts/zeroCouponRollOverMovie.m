@@ -21,9 +21,9 @@ paramsTable = paramsTable(~any(isnan(paramsTable{:, :}), 2), :);
 
 paramsTable2 = paramsTable;
 paramsTable2{:, 2:end} = flipud(paramsTable{:, 2:end});
-paramsTable2.Date = (1:size(paramsTable2, 1))' + paramsTable.Date(end) + 1;
+paramsTable2.Date = flipud(paramsTable.Date(end) - paramsTable.Date) + paramsTable.Date(end) + 1;
 paramsTable = [paramsTable; paramsTable2];
-paramsTable = paramsTable(1:20000, :);
+%paramsTable = paramsTable(1:20000, :);
 
 %% get representative yield curve
 
@@ -32,36 +32,56 @@ reprYields = svenssonYields(paramsTable{:, 2:end}, reprMat);
 
 %%
 
+doPlot = false;
+plotFreq = 100;
+
+if doPlot
+
 f = figure('pos', genInfo.pos);
-ax1 = subplot(1, 3, 1);
-ax2 = subplot(1, 3, 2);
-ax3 = subplot(1, 3, 3);
+ax1 = subplot(2, 2, 1:2);
+ax2 = subplot(2, 2, 3);
+ax3 = subplot(2, 2, 4);
 
 plot(paramsTable.Date, reprYields)
 grid minor
 datetick 'x'
 
+end
+
 % length of yield curve for re-balancing
 nCurveHorizon = 10;
+futureMaturs = 0.1:0.1:10; % points to evaluate yield curve on
 
 % set length of "backtest"
 nBtDays = size(paramsTable, 1) - nCurveHorizon*250;
 
-futureMaturs = 0.1:0.1:10;
+allBtDurs = [3, 5, 7, 9];
+allBtRollFreq = [0.1, 0.3, 0.5, 0.8];
 
-currPrice = 1;
-currExpiryInd = 9*250;
+allBtPrices = nan(nBtDays, length(allBtDurs)*length(allBtRollFreq));
+counter = 1;
+
+for kk=1:length(allBtDurs)
+    for ll=1:length(allBtRollFreq)
+
+stratParams.currPrice = 1;
+stratParams.strategyDuration = allBtDurs(kk);
+stratParams.rollFreq = ceil(allBtDurs(kk)*allBtRollFreq(ll)*250); % in days
+
+currExpiryInd = stratParams.strategyDuration*250;
 
 allPrices = nan(nBtDays, 1);
 allGuarteedPrices = [];
 allGuarteedDates = [];
+
+currPrice = stratParams.currPrice;
 
 % for each day, show current price, current maturity and current alternatives
 for ii=1:nBtDays
     
     currDate = paramsTable.Date(ii);
 
-    if ii==1 || mod(ii, 2) == 0 % update guaranteed payoff
+    if ii==1 || mod(ii, stratParams.rollFreq) == 0 % update guaranteed payoff
         
         % get guaranteed maturity
         expiryDate = paramsTable.Date(currExpiryInd + ii);
@@ -97,8 +117,9 @@ for ii=1:nBtDays
     [futureYields, currFwdRates] = svenssonYields(paramsTable{ii, 2:end}, futureMaturs);
     alternativePayoffs = currPrice * exp(futureYields/100 .* futureMaturs);
     alternativeDates = currDate + futureMaturs * 365;
-    
-    if mod(ii, 50) == 0
+
+    if doPlot
+    if mod(ii, plotFreq) == 0
         axes(ax1);
         plot(expiryDate, log(guarteedPayOff), 'or')
         hold on
@@ -106,7 +127,7 @@ for ii=1:nBtDays
         plot(paramsTable.Date(1:ii), log(allPrices(1:ii)), '-k')
         plot(alternativeDates, log(alternativePayoffs), '-b')
         plot(predDates, log(predVals), '-g')
-        plot(allGuarteedDates, log(allGuarteedPrices), 'ob')
+        plot(allGuarteedDates, log(allGuarteedPrices), 'ob', 'MarkerSize', 2)
         grid minor
         datetick 'x'
         hold off
@@ -130,13 +151,48 @@ for ii=1:nBtDays
         
         pause(0.00001)
     end
+    end
     
 end
+
+allBtPrices(:, counter) = allPrices;
+counter = counter + 1;
+
+    end
+end
+
+%%
+
+plot(paramsTable.Date(1:size(allBtPrices, 1)), log(allBtPrices))
+datetick 'x'
+grid minor
+
+%%
+
+fullLogRets = log(allBtPrices(end, :)) - log(allBtPrices(1, :));
+annualLogRets = fullLogRets ./ ((paramsTable.Date(end)-paramsTable.Date(1))/365);
+xxannualRets = (exp(annualLogRets) - 1)*100;
+
+%% get table of final annual rets
+
+annualRets = nan(length(allBtDurs), length(allBtRollFreq));
+
+counter = 1;
+for kk=1:length(allBtDurs)
+    for ll=1:length(allBtRollFreq)
+        annualRets(kk, ll) = xxannualRets(1, counter);
+        counter = counter + 1;
+    end
+end
+
+
+
+
 
 
 %% get annualized return
 
-annualRet = exp(log(allPrices(end) - allPrices(1))/((paramsTable.Date(end)-paramsTable.Date(1))/365))-1
+annualRet = exp(log(allPrices(end)) - log(allPrices(1))/((paramsTable.Date(end)-paramsTable.Date(1))/365))-1
 
 
 %% 
