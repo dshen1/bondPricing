@@ -56,7 +56,9 @@ futureMaturs = 0.1:0.1:10; % points to evaluate yield curve on
 nBtDays = size(paramsTable, 1) - nCurveHorizon*250;
 
 allBtDurs = [3, 5, 7, 9];
+allBtDurs = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 allBtRollFreq = [0.1, 0.3, 0.5, 0.8];
+allBtRollFreq = 0.1;
 
 allBtPrices = nan(nBtDays, length(allBtDurs)*length(allBtRollFreq));
 counter = 1;
@@ -67,6 +69,7 @@ for kk=1:length(allBtDurs)
 stratParams.currPrice = 1;
 stratParams.strategyDuration = allBtDurs(kk);
 stratParams.rollFreq = ceil(allBtDurs(kk)*allBtRollFreq(ll)*250); % in days
+stratParams.rollFreq = 250;
 
 currExpiryInd = stratParams.strategyDuration*250;
 
@@ -157,6 +160,7 @@ end
 
 allBtPrices(:, counter) = allPrices;
 counter = counter + 1;
+counter
 
     end
 end
@@ -185,6 +189,21 @@ for kk=1:length(allBtDurs)
     end
 end
 
+%%
+
+colNams = strrep(cellstr(strcat('rollFreq_', num2str(allBtRollFreq'))), '.', '_');
+rowNams = strrep(cellstr(strcat('targetDur_', num2str(allBtDurs'))), '.', '_');
+
+annualRets = array2table(annualRets, 'VariableNames', colNams, 'RowNames', rowNams);
+
+%% visualize
+
+[xxGrid, yyGrid] = meshgrid(allBtRollFreq, allBtDurs);
+mesh(xxGrid, yyGrid, annualRets{:, :}, 'edgecolor', 'k')
+xlabel('Rolling frequency')
+ylabel('Target duration')
+title('Annualized returns')
+view([44, 24])
 
 
 
@@ -221,45 +240,59 @@ end
 
 %%
 
-nMonths = 12;
-AUMstart = 100;
+thisDats = paramsTable.Date(1:size(allBtPrices, 1));
+thisPrices = allBtPrices;
 
-allGRates = [1.1, 1.2, 1.3, 1.4];
-cfTVfraction = [0.5, 0.6, 0.7, 0.8];
-cfTVfraction = [0.5, 0.55, 0.6, 0.65];
-multipl = 1./(1-cfTVfraction);
-allModTO = [0.8, 1, 1.2];
+% get log returns
+logRets = diff(log(thisPrices))*100;
 
-nGRates = length(allGRates);
-nModTOs = length(allModTO);
+xxTab = array2table([thisDats(2:end), logRets]);
+xxTab.Properties.VariableNames{1} = 'Date';
 
-checkFullTOs = nan(nGRates, nModTOs);
-estTOs = nan(nGRates, nModTOs);
+% push to end-of-month
+xxTab.Date = eomdate(xxTab.Date);
 
-for ii=1:nGRates
-    for jj=1:nModTOs
-        gRate = allGRates(ii);
-        modTO = allModTO(jj);
-        
-        AUMs = AUMstart*gRate.^(0:(nMonths-1));
-        adjTVs = AUMs * 2 * modTO / 12;
-        fullTVs = adjTVs .* multipl(ii);
+% aggregate per year
+xxOnes = ones(length(xxTab.Date), 1);
+xxTab.Date = datenum(year(xxTab.Date), 12*xxOnes, 31*xxOnes);
 
-        xx = 12 * 0.5 *fullTVs ./ AUMs;
-        checkFullTOs(ii, jj) = xx(1);
-        
-        estTOs(ii, jj) = (sum(fullTVs)/mean(AUMs))*0.5;
-    end
-end
+varNams = tabnames(xxTab(:, 2:end));
+
+xxTabSum = grpstats(xxTab, 'Date', 'sum');
+xxTabVola = grpstats(xxTab, 'Date', 'std');
+
+%% period returns
+
+xx = 100*(exp(xxTabSum{:, 3:end}/100) - 1);
+heatmap(xx, varNams, datestr(xxTab.Date, 'yyyy-mm'), ...
+    [], 'ColorMap', 'money', 'NaNColor', [0,0,1], 'TickAngle', 45);
+colorbar();
+title('Realized annual returns') 
+
+%% cumulated returns
+
+xx = cumsum(xxTabSum{:, 3:end}/100) ./ repmat((1:size(xxTabSum, 1))', 1, size(xxTabSum, 2)-2);
+xx = 100*(exp(xx)-1);
+xxDatNams = cellstr(datestr(xxTabSum.Date, 'yyyy-mm'));
+heatmap(xx, varNams, xxDatNams, ...
+    [], 'ColorMap', 'jet', 'NaNColor', [0,0,1], 'TickAngle', 45);
+colorbar();
+title('Aggregated annual returns') 
 
 
+%%
+
+xx = xxTabVola{:, 3:end}*sqrt(250);
+heatmap(xx, varNams, datestr(xxTabSum.Date, 'yyyy-mm'), ...
+    [], 'ColorMap', 'jet', 'TickAngle', 45);
+colorbar();
+title('Realized annualized vola') 
 
 
-
-
-
-
-
+%% inputs
+% - table with returns
+% - frequency
+% - scaling factor (for vola)
 
 
 
