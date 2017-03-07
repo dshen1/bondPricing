@@ -19,11 +19,11 @@ paramsTable = paramsTable(~any(isnan(paramsTable{:, :}), 2), :);
 
 %% yield curve: extension by reflection
 
-paramsTable2 = paramsTable;
-paramsTable2{:, 2:end} = flipud(paramsTable{:, 2:end});
-paramsTable2.Date = flipud(paramsTable.Date(end) - paramsTable.Date) + paramsTable.Date(end) + 1;
-paramsTable = [paramsTable; paramsTable2];
-%paramsTable = paramsTable(1:20000, :);
+% paramsTable2 = paramsTable;
+% paramsTable2{:, 2:end} = flipud(paramsTable{:, 2:end});
+% paramsTable2.Date = flipud(paramsTable.Date(end) - paramsTable.Date) + paramsTable.Date(end) + 1;
+% paramsTable = [paramsTable; paramsTable2];
+% %paramsTable = paramsTable(1:20000, :);
 
 %% get representative yield curve
 
@@ -248,51 +248,50 @@ logRets = diff(log(thisPrices))*100;
 
 xxTab = array2table([thisDats(2:end), logRets]);
 xxTab.Properties.VariableNames{1} = 'Date';
+xxTab.Properties.VariableNames(2:end) = cellstr(strcat('dur_', num2str(allBtDurs')));
 
-% push to end-of-month
-xxTab.Date = eomdate(xxTab.Date);
+%% Realized annual returns
 
-% aggregate per year
-xxOnes = ones(length(xxTab.Date), 1);
-xxTab.Date = datenum(year(xxTab.Date), 12*xxOnes, 31*xxOnes);
+% get x-labels
+xlabs = cellstr(strcat(num2str(allBtDurs'), ' years'));
 
-varNams = tabnames(xxTab(:, 2:end));
+f = figure('pos', genInfo.pos);
 
-xxTabSum = grpstats(xxTab, 'Date', 'sum');
-xxTabVola = grpstats(xxTab, 'Date', 'std');
+ax1 = subplot(1, 2, 1);
 
-%% period returns
+% Realized annualized volas
+realizedVolas = aggrPerPeriod(xxTab, 'yearly', 'std', sqrt(250));
 
-xx = 100*(exp(xxTabSum{:, 3:end}/100) - 1);
-heatmap(xx, varNams, datestr(xxTab.Date, 'yyyy-mm'), ...
-    [], 'ColorMap', 'money', 'NaNColor', [0,0,1], 'TickAngle', 45);
+xx = realizedVolas{:, 2:end};
+heatmap(xx, xlabs, datestr(realizedVolas.Date, 'yyyy-mm'), ...
+    [], 'ColorMap', 'jet', 'NaNColor', [0,0,1], 'TickAngle', 45);
+colormap(ax1, 'jet');
 colorbar();
-title('Realized annual returns') 
+xlabel('Duration')
+title('Realized annual volas') 
 
+ax2 = subplot(1, 2, 2);
+
+realizedAnnualRets = aggrPerPeriod(xxTab, 'yearly', 'sum');
+
+xx = 100*(exp(realizedAnnualRets{:, 2:end}/100) - 1);
+figObj = heatmap(xx, xlabs, datestr(realizedAnnualRets.Date, 'yyyy-mm'), ...
+    '%0.2f', 'FontSize', 6, 'ColorMap', 'money', 'NaNColor', [0,0,1], 'TickAngle', 45);
+colorbar();
+xlabel('Duration')
+title('Realized annual returns') 
+drawnow()
 %% cumulated returns
 
-xx = cumsum(xxTabSum{:, 3:end}/100) ./ repmat((1:size(xxTabSum, 1))', 1, size(xxTabSum, 2)-2);
+realizedAnnualRets = aggrPerPeriod(xxTab, 'yearly', 'sum');
+
+[xxNRows, xxNCols] = size(realizedAnnualRets);
+xx = cumsum(realizedAnnualRets{:, 2:end}/100) ./ repmat((1:xxNRows)', 1, xxNCols-1);
 xx = 100*(exp(xx)-1);
-xxDatNams = cellstr(datestr(xxTabSum.Date, 'yyyy-mm'));
-heatmap(xx, varNams, xxDatNams, ...
-    [], 'ColorMap', 'jet', 'NaNColor', [0,0,1], 'TickAngle', 45);
+xxDatNams = cellstr(datestr(realizedAnnualRets.Date, 'yyyy-mm'));
+heatmap(xx, xlabs, xxDatNams, ...
+    '%0.2f', 'FontSize', 6, 'ColorMap', 'jet', 'NaNColor', [0,0,1], 'TickAngle', 45);
 colorbar();
+xlabel('Duration')
 title('Aggregated annual returns') 
-
-
-%%
-
-xx = xxTabVola{:, 3:end}*sqrt(250);
-heatmap(xx, varNams, datestr(xxTabSum.Date, 'yyyy-mm'), ...
-    [], 'ColorMap', 'jet', 'TickAngle', 45);
-colorbar();
-title('Realized annualized vola') 
-
-
-%% inputs
-% - table with returns
-% - frequency
-% - scaling factor (for vola)
-
-
 
