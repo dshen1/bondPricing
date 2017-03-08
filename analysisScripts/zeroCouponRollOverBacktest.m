@@ -1,14 +1,4 @@
-%% load historic estimated parameters
-
-fname = fullfile(dataDir, 'paramsData_FED.csv');
-paramsTable = readtable(fname);
-paramsTable = paramsTable(~any(isnan(paramsTable{:, :}), 2), :);
-
-%% define strategy parameters
-
-stratParams.currPrice = 1;
-stratParams.strategyDuration = 8;
-stratParams.rollFreq = 250; % rolling frequency in BUSINESS days
+function allPrices = zeroCouponRollOverBacktest(stratParams, paramsTable)
 
 % get length of backtest
 nBtDays = size(paramsTable, 1);
@@ -33,6 +23,7 @@ guarteedYield = svenssonYields(paramsMatrix(1, :), currMaturInYears);
 
 % get guaranteed payoff
 currPrice = stratParams.currPrice; % running variable, daily
+allPrices(1) = currPrice;
 guarteedPayOff = currPrice * exp(guarteedYield/100 * currMaturInYears); % running variable, each rebalance
 
 % iterate over days
@@ -67,4 +58,6 @@ for ii=2:nBtDays
         guarteedPayOff = currPrice * exp(guarteedYield/100 * currMaturInYears);
         
     end
+end
+
 end
