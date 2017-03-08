@@ -70,15 +70,12 @@ for ii=1:nTargetDurs
     end
 end
 
-%%
 
-%% compute several measures
+%% compute risk and return of strategies
 
 nBtYears = (paramsTable.Date(end)-paramsTable.Date(1))/365;
 annualRet = exp((log(allBtPrices(end, :)) - log(allBtPrices(1, :)))/nBtYears) - 1;
 
-
-%%
 % get log returns
 dailyLogRets = diff(log(allBtPrices))*100;
 dailyLogRetTab = array2table([paramsTable.Date(2:end) dailyLogRets]);
@@ -106,6 +103,8 @@ plot(annualVola)
 grid minor
 title('Annualized volatility')
 
+exportFig(f, 'zcBondRollRiskReturn', genInfo.picsDir, genInfo.fmt, genInfo.figClose, true)
+
 f = figure();
 plot(annualVola, annualRet*100, '.')
 grid minor
@@ -113,7 +112,9 @@ title('Risk-return profiles')
 xlabel('Annualized vola')
 ylabel('Annualized return')
 
-%% yearly returns
+exportFig(f, 'zcBondRollRiskVsReturn', genInfo.picsDir, genInfo.fmt, genInfo.figClose, true)
+
+%% show yearly returns to see good / bad periods for strategies
 
 yearlyRets = aggrPerPeriod(dailyLogRetTab, 'yearly', 'sum');
 
@@ -126,7 +127,9 @@ colorbar();
 xlabel('Duration')
 title('Yearly realized returns')
 
-%%
+exportFig(f, 'zcBondRollYearlyReturns', genInfo.picsDir, genInfo.fmt, genInfo.figClose, true)
+
+%% strategy correlations
 
 f = figure('pos', genInfo.pos);
 
@@ -148,26 +151,27 @@ axis square
 title('Yearly return correlations')
 
 
+exportFig(f, 'zcBondRollStratCorrelations', genInfo.picsDir, genInfo.fmt, genInfo.figClose, true)
 
-%% correlations with bench yields
+
+%% explaining strategy returns
 % what's the better predictor:
 % - current level
 % - simultaneous interest rate movement
+% - does it depend on the investment horizon?
 
-%% returns and yield changes
-
+% specify investment horizons to be explained
 allWindSizes = [1, 50, 500, 1000, 2500];
 
+% get explanatory variables and returns to be explained
 dailyLogRets = diff(log(allBtPrices));
 explVars = [benchYields(2:end), absYieldChanges];
 
-nStrats = size(allBtPrices, 2);
-nTimeHorizons = length(allWindSizes);
-nResults = 5;
+% preallocate results
+nStrats = size(allBtPrices, 2); % for each strategy
+nTimeHorizons = length(allWindSizes); % and each time horizon
+nResults = 5; % get this number of measures
 allRegrResults = nan(nResults, nStrats, nTimeHorizons);
-
-%allCorrsToYieldChanges = nan(length(allWindSizes), size(dailyLogRets, 2));
-%allCorrsToYieldLevels= nan(length(allWindSizes), size(dailyLogRets, 2));
 
 for ll=1:length(allWindSizes)
     % get current time horizon
@@ -184,7 +188,7 @@ for ll=1:length(allWindSizes)
     smoothedChanges(1:windSize-1, :) = [];
     
     % current explanatory variables
-    currExplVars = [explVars(1:end-windSize+1, 1), smoothedChanges(:, 2)];
+    currExplVars = [explVars(1:end-windSize+1, 1), smoothedChanges(:, 1)];
     yVals = smoothedChanges(:, 2:end);
     
     % conduct least-squares with both explanatory variables
@@ -215,7 +219,7 @@ end
 
 %%
 
-figure('pos', genInfo.pos);
+f = figure('pos', genInfo.pos);
 
 subplot(2, 2, 1:2)
 hold on
@@ -242,6 +246,8 @@ end
 grid minor
 title('R-squared for yield change only')
 
+exportFig(f, 'zcBondRollExplanations', genInfo.picsDir, genInfo.fmt, genInfo.figClose, true)
+
 %% hypothesis
 % - future strategy returns are explainable by:
 %   - current yield level
@@ -262,6 +268,9 @@ xlabel('Time horizon')
 ylabel('Durations')
 colorbar()
 title('Explained variance of returns')
+
+
+exportFig(f, 'zcBondRollExplainedHeatmap', genInfo.picsDir, genInfo.fmt, genInfo.figClose, true)
 
 %%
 
@@ -293,6 +302,8 @@ xlabel('Time horizon')
 ylabel('Durations')
 colorbar()
 title('Variance explained by yield changes only')
+
+exportFig(f, 'zcBondRollExplanationsHeatmap', genInfo.picsDir, genInfo.fmt, genInfo.figClose, true)
 
 %% fraction explained by level only
 
@@ -328,3 +339,93 @@ ylabel('Durations')
 colorbar()
 title('Fraction explained by yield changes')
 
+exportFig(f, 'zcBondRollExplainedFractionsHeatmap', genInfo.picsDir, genInfo.fmt, genInfo.figClose, true)
+
+%% show some extreme case
+% - strategies with different target duratiosn
+% - same return horizon for all strategies
+% - benchmark yield matching target duration
+
+f = figure('pos', genInfo.pos);
+
+for ii=1:15
+windSize = 2500;
+stratRets = diff(log(allBtPrices(:, ii)))*100;
+stratRets = movingAvg(stratRets, windSize, true);
+stratRets(1:windSize-1) = [];
+
+benchMaturs = ii;
+benchYields = svenssonYields(paramsTable{:, 2:end}, benchMaturs);
+
+
+subplot(3, 5, ii)
+xxnObs = length(stratRets);
+plot(paramsTable.Date(2:(end-windSize)), benchYields(2:(end-windSize)))
+hold on
+plot(paramsTable.Date(2:(2+xxnObs-1)), stratRets*250)
+grid minor
+datetick 'x'
+if ii==3
+    title([num2str(windSize) ' days return'])
+end
+
+end
+
+exportFig(f, 'zcBondRollReturnLongHoldingPeriodVsYield', genInfo.picsDir, genInfo.fmt, genInfo.figClose, true)
+
+%% bench yields and strategy with matching durations
+% - strategies with different target durations
+% - return horizon matching target duration
+% - benchmark yield matching target duration
+
+f = figure('pos', genInfo.pos);
+
+for ii=1:15
+windSize = ii*250;
+stratRets = diff(log(allBtPrices(:, ii)))*100;
+stratRets = movingAvg(stratRets, windSize, true);
+stratRets(1:windSize-1) = [];
+
+benchMaturs = ii;
+benchYields = svenssonYields(paramsTable{:, 2:end}, benchMaturs);
+
+
+subplot(3, 5, ii)
+xxnObs = length(stratRets);
+plot(paramsTable.Date(2:(end-windSize)), benchYields(2:(end-windSize)))
+hold on
+plot(paramsTable.Date(2:(2+xxnObs-1)), stratRets*250)
+grid minor
+datetick 'x'
+title([num2str(ii) ' years'])
+end
+
+exportFig(f, 'zcBondRollReturnVsYieldEqualDuration', genInfo.picsDir, genInfo.fmt, genInfo.figClose, true)
+
+%% bench yield changes and returns
+
+
+f = figure('pos', genInfo.pos);
+
+for ii=1:15
+windSize = 2500;
+stratRets = diff(log(allBtPrices(:, ii)))*100;
+stratRets = movingAvg(stratRets, windSize, true);
+stratRets(1:windSize-1) = [];
+
+benchMaturs = 8;
+benchYields = svenssonYields(paramsTable{:, 2:end}, benchMaturs);
+yieldChanges = movingAvg(diff(log(benchYields))*100, windSize, true);
+yieldChanges(1:windSize-1) = [];
+
+subplot(3, 5, ii)
+plot(yieldChanges*(-1), stratRets*250, '.')
+grid minor
+% xxnObs = length(stratRets);
+% plot(paramsTable.Date(2:(2+xxnObs-1)), yieldChanges*(-1)*250)
+% hold on
+% plot(paramsTable.Date(2:(2+xxnObs-1)), stratRets*250)
+% grid minor
+% datetick 'x'
+title([num2str(ii) ' years'])
+end
