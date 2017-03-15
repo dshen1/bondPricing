@@ -1,5 +1,20 @@
 %% run zero coupon backtests and analyse them
+%
+% The strategy will simulate zero-coupon rolling strategies with some fixed
+% rolling frequency (absolute OR relative).
+%
 
+%% settings
+
+% when single interest rate is required over time
+benchMaturs = 10;
+
+% select durations
+allTargetDurs = (1:15)';
+
+% select rolling frequencies
+allHoldingFraction = [0.7, 0.5, 0.3, 0.1, 0.02];
+allHoldingFraction = 0.1;
 
 %% set up general settings
 
@@ -10,6 +25,17 @@ genInfo.figClose = true;
 genInfo.picsDir = '../../dissDataAndPics/bondPricing/pics/devPics';
 genInfo.valueLabelFormat = '%2.1f';
 %genInfo.valueLabelFormat = [];
+
+%%
+
+genInfo.allTargetDurs = allTargetDurs;
+genInfo.nDurs = length(allTargetDurs);
+genInfo.durationNames = strcat(strrep(cellstr(num2str(allTargetDurs)), ' ', ''), ' years');
+genInfo.durationNamesShort = strcat(strrep(cellstr(num2str(allTargetDurs)), ' ', ''), ' y.');
+
+xxStr = ['jet(' num2str(genInfo.nDurs) ')'];
+genInfo.DurColors = colormap(xxStr);
+close();
 
 %% load historic estimated parameters
 
@@ -22,25 +48,20 @@ paramsTable = paramsTable(~any(isnan(paramsTable{:, :}), 2), :);
 
 %% yield curve: extension by reflection
 
-paramsTable2 = paramsTable;
-paramsTable2{:, 2:end} = flipud(paramsTable{:, 2:end});
-paramsTable2.Date = flipud(paramsTable.Date(end) - paramsTable.Date) + paramsTable.Date(end) + 1;
-paramsTable = [paramsTable; paramsTable2];
-%paramsTable = paramsTable(1:20000, :);
+% paramsTable2 = paramsTable;
+% paramsTable2{:, 2:end} = flipud(paramsTable{:, 2:end});
+% paramsTable2.Date = flipud(paramsTable.Date(end) - paramsTable.Date) + paramsTable.Date(end) + 1;
+% paramsTable = [paramsTable; paramsTable2];
+% %paramsTable = paramsTable(1:20000, :);
 
 %% get benchmark yields
 
-benchMaturs = 10;
 benchYields = svenssonYields(paramsTable{:, 2:end}, benchMaturs);
 
 %% define backtest strategies
 
-allTargetDurs = (1:15)';
-allHoldingFraction = [0.7, 0.5, 0.3, 0.1, 0.02];
-allHoldingFraction = 0.1;
-
 % preallocation
-nTargetDurs = length(allTargetDurs);
+nTargetDurs = length(genInfo.allTargetDurs);
 nRolloverFreq = length(allHoldingFraction);
 allBtPrices = nan(size(paramsTable, 1), nTargetDurs * nRolloverFreq);
 
@@ -54,12 +75,12 @@ for ii=1:nTargetDurs
 
         % get current strategy parameters
         thisStratParams.currPrice = 1;
-        thisStratParams.strategyDuration = allTargetDurs(ii);
+        thisStratParams.strategyDuration = genInfo.allTargetDurs(ii);
         
-        xx = allTargetDurs(ii)*allHoldingFraction(kk); % roll over freq in years
+        xx = genInfo.allTargetDurs(ii)*allHoldingFraction(kk); % roll over freq in years
         thisStratParams.rollFreq = ceil(xx*250); % rolling frequency in BUSINESS days
         
-        %% 
+        %% conduct backtest
         
         btPrices = zeroCouponRollOverBacktest(thisStratParams, paramsTable);
         
@@ -69,7 +90,6 @@ for ii=1:nTargetDurs
         counter = counter + 1;
     end
 end
-
 
 %% compute risk and return of strategies
 
@@ -105,13 +125,38 @@ title('Annualized volatility')
 
 exportFig(f, 'zcBondRollRiskReturn', genInfo.picsDir, genInfo.fmt, genInfo.figClose, true)
 
-f = figure();
-plot(annualVola, annualRet*100, '.')
+%%
+
+f = figure('pos', genInfo.pos);
+
+subplot(1, 11, 1:4)
+hold on
+for ii=1:genInfo.nDurs
+    plot(paramsTable.Date, log(allBtPrices(:, ii)), ...
+        'Color', genInfo.DurColors(ii, :), 'DisplayName', genInfo.durationNames{ii})
+end
 grid minor
+datetick 'x'
+set(gca, 'XTickLabelRotation', 45)
+title('Bond price')
+
+subplot(1, 11, 6:11)
+
+hold on
+for ii=1:genInfo.nDurs
+    plot(annualVola(ii), annualRet(ii)*100, '.', 'MarkerSize', 10, ...
+        'Color', genInfo.DurColors(ii, :), 'DisplayName', genInfo.durationNames{ii})
+    text(annualVola(ii), annualRet(ii)*100 - 0.04, genInfo.durationNamesShort(ii), 'Rotation', -45)
+end
+grid minor
+hold on
 title('Risk-return profiles')
 xlabel('Annualized vola')
 ylabel('Annualized return')
+legend('Location', 'EastOutside')
 
+
+%%
 exportFig(f, 'zcBondRollRiskVsReturn', genInfo.picsDir, genInfo.fmt, genInfo.figClose, true)
 
 %% show yearly returns to see good / bad periods for strategies
@@ -121,7 +166,7 @@ yearlyRets = aggrPerPeriod(dailyLogRetTab, 'yearly', 'sum');
 f = figure('pos', genInfo.pos);
 
 xx = yearlyRets{:, 2:end};
-heatmap(xx, [], datestr(yearlyRets.Date, 'yyyy-mm'), ...
+heatmap(xx, genInfo.durationNames, datestr(yearlyRets.Date, 'yyyy-mm'), ...
     [], 'FontSize', 12, 'ColorMap', 'money', 'TickAngle', 45);
 colorbar();
 xlabel('Duration')
@@ -258,7 +303,7 @@ exportFig(f, 'zcBondRollExplanations', genInfo.picsDir, genInfo.fmt, genInfo.fig
 xx = allRegrResults(3, :, :);
 xx = reshape(xx, nTargetDurs, nTimeHorizons);
 
-durLabels = strcat(cellstr(num2str(allTargetDurs)), ' years');
+durLabels = strcat(cellstr(num2str(genInfo.allTargetDurs)), ' years');
 horizonLabels = strcat(cellstr(num2str(allWindSizes')), ' days');
 
 f = figure();
@@ -279,7 +324,7 @@ f = figure('pos', genInfo.pos);
 xx = allRegrResults(4, :, :);
 xx = reshape(xx, nTargetDurs, nTimeHorizons);
 
-durLabels = strcat(cellstr(num2str(allTargetDurs)), ' years');
+durLabels = strcat(cellstr(num2str(genInfo.allTargetDurs)), ' years');
 horizonLabels = strcat(cellstr(num2str(allWindSizes')), ' days');
 
 subplot(1, 2, 1)
@@ -293,7 +338,7 @@ title('Variance explained by prevailing level')
 xx = allRegrResults(5, :, :);
 xx = reshape(xx, nTargetDurs, nTimeHorizons);
 
-durLabels = strcat(cellstr(num2str(allTargetDurs)), ' years');
+durLabels = strcat(cellstr(num2str(genInfo.allTargetDurs)), ' years');
 horizonLabels = strcat(cellstr(num2str(allWindSizes')), ' days');
 
 subplot(1, 2, 2)
