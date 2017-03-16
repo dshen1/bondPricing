@@ -138,10 +138,10 @@ end
 grid minor
 datetick 'x'
 set(gca, 'XTickLabelRotation', 45)
-title('Bond price')
+title('Rolling zero-coupon bonds')
+ylabel('Logarithmic portfolio value')
 
 subplot(1, 11, 6:11)
-
 hold on
 for ii=1:genInfo.nDurs
     plot(annualVola(ii), annualRet(ii)*100, '.', 'MarkerSize', 10, ...
@@ -155,8 +155,6 @@ xlabel('Annualized vola')
 ylabel('Annualized return')
 legend('Location', 'EastOutside')
 
-
-%%
 exportFig(f, 'zcBondRollRiskVsReturn', genInfo.picsDir, genInfo.fmt, genInfo.figClose, true)
 
 %% show yearly returns to see good / bad periods for strategies
@@ -206,11 +204,20 @@ exportFig(f, 'zcBondRollStratCorrelations', genInfo.picsDir, genInfo.fmt, genInf
 % - does it depend on the investment horizon?
 
 % specify investment horizons to be explained
-allWindSizes = [1, 50, 500, 1000, 2500];
+allWindSizes = 1:50:4000;
+relevantWindSizes = [1, 50, 500, 1000, 2500, 4000];
+for ii=1:length(relevantWindSizes)
+    [~, relevantWindSizeInds(ii)] = min(abs(relevantWindSizes(ii) - allWindSizes));
+end
 
+%%
 % get explanatory variables and returns to be explained
 dailyLogRets = diff(log(allBtPrices));
-explVars = [benchYields(2:end), absYieldChanges];
+
+allBenchYields = svenssonYields(paramsTable{:, 2:end}, genInfo.allTargetDurs');
+%allBenchYields = svenssonYields(paramsTable{:, 2:end}, 5*ones(size(genInfo.allTargetDurs')));
+allAbsYieldChanges = diff(allBenchYields);
+allBenchLevels = allBenchYields(2:end, :);
 
 % preallocate results
 nStrats = size(allBtPrices, 2); % for each strategy
@@ -218,47 +225,54 @@ nTimeHorizons = length(allWindSizes); % and each time horizon
 nResults = 5; % get this number of measures
 allRegrResults = nan(nResults, nStrats, nTimeHorizons);
 
-for ll=1:length(allWindSizes)
+for ll=1:nTimeHorizons
     % get current time horizon
     windSize = allWindSizes(ll);
-    
-    % preallocate smoothed changes
-    changeMatrix = [explVars(:, 2), dailyLogRets];
-    smoothedChanges = nan(size(changeMatrix));
-    for ii=1:size(smoothedChanges, 2);
-        xx = movingAvg(changeMatrix(:, ii), windSize, true);
+
+    for thisDurInd=1:nStrats
+        % average yield curve changes
+        xx = movingAvg(allAbsYieldChanges(:, thisDurInd), windSize, true);
         xx = xx * 250;
-        smoothedChanges(:, ii) = xx;
+        thisConcurrentYieldChanges = xx;
+        thisConcurrentYieldChanges(1:windSize-1, :) = [];
+        
+        % average strategy return
+        xx = movingAvg(dailyLogRets(:, thisDurInd), windSize, true);
+        xx = xx * 250;
+        thisMeanStratRets = xx;
+        thisMeanStratRets(1:windSize-1, :) = [];
+        
+        % get associated levels
+        thisYieldLevels = allBenchLevels(1:end-windSize+1, thisDurInd);
+        
+        % current explanatory variables
+        currExplVars = [thisYieldLevels, thisConcurrentYieldChanges];
+        yVals = thisMeanStratRets;
+        
+        % conduct least-squares with both explanatory variables
+        coeffs = currExplVars\yVals;
+        yHat = currExplVars * coeffs;
+        
+        % get goodness of regression
+        SST = sum((yVals - mean(yVals)).^2);
+        SSR = sum((yVals - yHat).^2);
+        Rsqu = 1 - SSR./SST;
+        
+        % conduct least-squares with single explanatory variable only
+        xxMatr = [ones(size(currExplVars, 1), 1), currExplVars(:, 2)]; % yield changes
+        coeffsChange = xxMatr\yVals;
+        yHat = xxMatr * coeffsChange;
+        SSR = sum((yVals - yHat).^2);
+        RsquChange = 1 - SSR./SST;
+        
+        xxMatr = [ones(size(currExplVars, 1), 1), currExplVars(:, 1)]; % level
+        coeffsChange = xxMatr\yVals;
+        yHat = xxMatr * coeffsChange;
+        SSR = sum((yVals - yHat).^2);
+        RsquLev = 1 - SSR./SST;
+        
+        allRegrResults(:, thisDurInd, ll) = [coeffs; Rsqu; RsquLev; RsquChange];
     end
-    smoothedChanges(1:windSize-1, :) = [];
-    
-    % current explanatory variables
-    currExplVars = [explVars(1:end-windSize+1, 1), smoothedChanges(:, 1)];
-    yVals = smoothedChanges(:, 2:end);
-    
-    % conduct least-squares with both explanatory variables
-    coeffs = currExplVars\yVals;
-    yHat = currExplVars * coeffs;
-    
-    % get goodness of regression
-    SST = sum((yVals - repmat(mean(yVals), size(yVals, 1), 1)).^2);
-    SSR = sum((yVals - yHat).^2);
-    Rsqu = 1 - SSR./SST;
-    
-    % conduct least-squares with single explanatory variable only
-    xxMatr = [ones(size(currExplVars, 1), 1), currExplVars(:, 2)];
-    coeffsChange = xxMatr\yVals;
-    yHat = xxMatr * coeffsChange;
-    SSR = sum((yVals - yHat).^2);
-    RsquChange = 1 - SSR./SST;
-
-    xxMatr = [ones(size(currExplVars, 1), 1), currExplVars(:, 1)];
-    coeffsChange = xxMatr\yVals;
-    yHat = xxMatr * coeffsChange;
-    SSR = sum((yVals - yHat).^2);
-    RsquLev = 1 - SSR./SST;
-
-    allRegrResults(:, :, ll) = [coeffs; Rsqu; RsquLev; RsquChange];
 
 end
 
@@ -268,26 +282,39 @@ f = figure('pos', genInfo.pos);
 
 subplot(2, 2, 1:2)
 hold on
-for ii=1:size(allRegrResults, 3)
-    plot(allRegrResults(3, :, ii))
+for ii=1:nTargetDurs
+    xx = allRegrResults(3, ii, :);
+    plot(allWindSizes/250, xx(:), 'Color', genInfo.DurColors(ii, :))
 end
+%set(gca, 'XTick', 1:nTimeHorizons)
+%set(gca, 'XTickLabel', cellstr(num2str(allWindSizes')))
+xlabel('Time horizon')
 grid minor
-legend(cellstr(num2str(allWindSizes')), 'Location', 'EastOutside')
+%legend(cellstr(num2str(allWindSizes')), 'Location', 'EastOutside')
+legend(genInfo.durationNames, 'Location', 'EastOutside')
 title('R-squared for both variables')
 
 subplot(2, 2, 3)
 hold on
-for ii=1:size(allRegrResults, 3)
-    plot(allRegrResults(4, :, ii))
+for ii=1:nTargetDurs
+    xx = allRegrResults(4, ii, :);
+    plot(allWindSizes/250, xx(:), 'Color', genInfo.DurColors(ii, :))
 end
+%set(gca, 'XTick', 1:nTimeHorizons)
+%set(gca, 'XTickLabel', cellstr(num2str(allWindSizes')))
+xlabel('Time horizon')
 grid minor
 title('R-squared for level only')
 
 subplot(2, 2, 4)
 hold on
-for ii=1:size(allRegrResults, 3)
-    plot(allRegrResults(5, :, ii))
+for ii=1:nTargetDurs
+    xx = allRegrResults(5, ii, :);
+    plot(allWindSizes/250, xx(:), 'Color', genInfo.DurColors(ii, :))
 end
+%set(gca, 'XTick', 1:nTimeHorizons)
+%set(gca, 'XTickLabel', cellstr(num2str(allWindSizes')))
+xlabel('Time horizon')
 grid minor
 title('R-squared for yield change only')
 
@@ -300,11 +327,11 @@ exportFig(f, 'zcBondRollExplanations', genInfo.picsDir, genInfo.fmt, genInfo.fig
 % - the importance of level / yield change varies with the time horizon
 % - for longer holding periods level becomes more important
 
-xx = allRegrResults(3, :, :);
-xx = reshape(xx, nTargetDurs, nTimeHorizons);
+xx = allRegrResults(3, :, relevantWindSizeInds);
+xx = reshape(xx, nTargetDurs, length(relevantWindSizeInds));
 
 durLabels = strcat(cellstr(num2str(genInfo.allTargetDurs)), ' years');
-horizonLabels = strcat(cellstr(num2str(allWindSizes')), ' days');
+horizonLabels = strcat(cellstr(num2str(relevantWindSizes')), ' days');
 
 f = figure();
 
@@ -321,11 +348,11 @@ exportFig(f, 'zcBondRollExplainedHeatmap', genInfo.picsDir, genInfo.fmt, genInfo
 
 f = figure('pos', genInfo.pos);
 
-xx = allRegrResults(4, :, :);
-xx = reshape(xx, nTargetDurs, nTimeHorizons);
+xx = allRegrResults(4, :, relevantWindSizeInds);
+xx = reshape(xx, nTargetDurs, length(relevantWindSizeInds));
 
 durLabels = strcat(cellstr(num2str(genInfo.allTargetDurs)), ' years');
-horizonLabels = strcat(cellstr(num2str(allWindSizes')), ' days');
+horizonLabels = strcat(cellstr(num2str(relevantWindSizes')), ' days');
 
 subplot(1, 2, 1)
 heatmap(xx, horizonLabels, durLabels, '%1.2f', 'ColorMap', 'jet', 'TickAngle', 45);
@@ -335,11 +362,8 @@ colorbar()
 title('Variance explained by prevailing level')
 
 
-xx = allRegrResults(5, :, :);
-xx = reshape(xx, nTargetDurs, nTimeHorizons);
-
-durLabels = strcat(cellstr(num2str(genInfo.allTargetDurs)), ' years');
-horizonLabels = strcat(cellstr(num2str(allWindSizes')), ' days');
+xx = allRegrResults(5, :, relevantWindSizeInds);
+xx = reshape(xx, nTargetDurs, length(relevantWindSizes));
 
 subplot(1, 2, 2)
 heatmap(xx, horizonLabels, durLabels, '%1.2f', 'ColorMap', 'jet', 'TickAngle', 45);
@@ -354,11 +378,11 @@ exportFig(f, 'zcBondRollExplanationsHeatmap', genInfo.picsDir, genInfo.fmt, genI
 
 f = figure('pos', genInfo.pos);
 
-xx = allRegrResults(3, :, :);
-xxFull = reshape(xx, nTargetDurs, nTimeHorizons);
+xx = allRegrResults(3, :, relevantWindSizeInds);
+xxFull = reshape(xx, nTargetDurs, length(relevantWindSizeInds));
 
-xx = allRegrResults(4, :, :);
-xxLevel = reshape(xx, nTargetDurs, nTimeHorizons);
+xx = allRegrResults(4, :, relevantWindSizeInds);
+xxLevel = reshape(xx, nTargetDurs, length(relevantWindSizeInds));
 
 xx = xxLevel ./ xxFull;
 
@@ -369,11 +393,11 @@ ylabel('Durations')
 colorbar()
 title('Fraction explained by level')
 
-xx = allRegrResults(3, :, :);
-xxFull = reshape(xx, nTargetDurs, nTimeHorizons);
+xx = allRegrResults(3, :, relevantWindSizeInds);
+xxFull = reshape(xx, nTargetDurs, length(relevantWindSizeInds));
 
-xx = allRegrResults(5, :, :);
-xxLevel = reshape(xx, nTargetDurs, nTimeHorizons);
+xx = allRegrResults(5, :, relevantWindSizeInds);
+xxLevel = reshape(xx, nTargetDurs, length(relevantWindSizeInds));
 
 xx = xxLevel ./ xxFull;
 
